@@ -17,7 +17,7 @@ module load hmmer/3.3.2
 # Replace these paths with locations on your system.
 # -----------------------------------------------------------------------------
 PROJECT_DIR="/path/to/flagella"
-SCRIPT_DIR="/path/to/homolog_search_scripts"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INPUT_HMM_DIR="${PROJECT_DIR}/input_sequences"
 SEARCH_RESULTS_DIR="${PROJECT_DIR}/search_results"
 
@@ -34,7 +34,7 @@ EVALUE=1000
 THREADS="${SLURM_CPUS_PER_TASK:-40}"
 
 # Example list. Edit this list and the SBATCH array range together.
-gene_names=(CsrA FlaG DUF3383)
+gene_names=(CsrA FlaG FapA)
 
 if (( SLURM_ARRAY_TASK_ID >= ${#gene_names[@]} )); then
     echo "SLURM_ARRAY_TASK_ID ${SLURM_ARRAY_TASK_ID} is outside the gene_names array."
@@ -44,7 +44,7 @@ fi
 gene_name=${gene_names[$SLURM_ARRAY_TASK_ID]}
 
 case "$gene_name" in
-    MotA|MotB|FliC|FleQ|MotE|PilZ|MotEPfam)
+    MotA|MotB|FliC)
         max_seqs=100000
         ;;
     *)

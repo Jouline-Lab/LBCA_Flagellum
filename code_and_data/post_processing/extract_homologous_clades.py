@@ -162,7 +162,8 @@ gene_boundaries = {
     "FliQ": {"boundary": [["NZ_CAJZAH010000004.1_271", "NZ_CP008852.1_2500"]], "hmmregion": 0}, # Done
     "FliR": {"boundary": [["JAJFTF010000051.1_51", "CP022114.1_124"]], "hmmregion": 0}, # Done
     "FliS": {"boundary": [["CADEEX010000001.1_29", "WRFW01000116.1_5"]], "hmmregion": 1}, # Done 
-    "FliW": {"boundary": [["JAGPBS010000023.1_7", "JAIUNT010000009.1_15"], ["CAKVCL010000012.1_9", "NZ_CP035928.1_1262"]], "hmmregion": 0}, # Done - could be double checked
+    "FliW": {"boundary": [["JAGPBS010000023.1_7", "JAIUNT010000009.1_15"], ["CAKVCL010000012.1_9", "NZ_CP035928.1_1262"]], "hmmregion": 0}, # Done 
+    "FliZ": {"boundary": [["NZ_CABHYG010000009.1_70", "UGTZ01000002.1_29"]], "hmmregion": 0}, # Done 
     "MotA": {"boundary": [["NZ_LROS01000079.1_43","WQZS01000003.1_66"], ["NZ_JQAR01000006.1_92", "JALZUD010000138.1_7"]], "hmmregion": 0},  # Done
     "MotB": {"boundary": [["NZ_QRAP01000001.1_885", "JABDKO010000122.1_6"]], "hmmregion": 1}, # Done
     "SwrD": {"boundary": [["NZ_LWAF01000001.1_42", "NZ_WTLI01000012.1_102"]], "hmmregion": 0}, # Done
@@ -173,7 +174,7 @@ gene_boundaries = {
     "FlaF": {"boundary": [["NZ_RJRZ01000020.1_48","QHBU01000122.1_3"]],"hmmregion": 0}, # Done
     "Putative": {"boundary": [["JALOAD010000056.1_9","DIVV01000130.1_6"]],"hmmregion":0}, #Done
     "PilZ": {"boundary": [["NZ_MSLT01000023.1_561","JAAYCS010000158.1_25"]],"hmmregion":0}, #Done
-    "FlbB": {"boundary": [["NZ_AP024401.1_284","NZ_FRAU01000010.1_67"],["JAEYOK010000016.1_113","JAILQQ010000206.1_11"],["CAMAQH010000001.1_43","JACPIN010000018.1_13"]],"hmmregion":0}, #Done
+    "MotE": {"boundary": [["NZ_AP024401.1_284","NZ_FRAU01000010.1_67"],["JAEYOK010000016.1_113","JAILQQ010000206.1_11"],["CAMAQH010000001.1_43","JACPIN010000018.1_13"]],"hmmregion":0}, #Done
     "MotY": {"boundary": [["NZ_KB822603.1_18","CAIRAY010000119.1_4"]],"hmmregion":0}, #Done
     "SwrB": {"boundary": [["JAFLRU010000043.1_11","NZ_CP048020.1_146"]],"hmmregion":0,
              "tree": fr"{HMM_TREE_DIR}\SwrB_db_FAMSA_gt0.1_m8ordered_rerooted.tree",
@@ -187,13 +188,7 @@ gene_boundaries = {
     "MotC": {"boundary": [["NZ_JACHIK010000011.1_65","JAHDFM010000008.1_6"]],"hmmregion":0,
              "tree": fr"{HMM_TREE_DIR}\MotC_db_FAMSA_gt0.1_m8ordered.tree",
              "fasta": fr"{MSA_DIR}\MotC_db_FAMSA_gt0.1_treeordered.fasta"}, # Done
-    "LdtR": {"boundary": [["NZ_CP041238.1_1272","NZ_LJHQ01000018.1_223"],["JAAEOK010000112.1_92","NZ_JACDXT010000048.1_30"]],"hmmregion":0,
-             "tree": fr"{HMM_TREE_DIR}\LdtR_db_FAMSA_gt0.1_m8ordered.tree",
-             "fasta": fr"{MSA_DIR}\LdtR_db_FAMSA_gt0.1_treeordered.fasta"}, # Done with 2 clades
-    "Transglutaminase": {"boundary": [["NZ_JAGIOS010000001.1_3556","NZ_KE386569.1_2940"]],"hmmregion":0,
-             "tree": fr"{HMM_TREE_DIR}\Transglutaminase_db_FAMSA_gt0.1_m8ordered.tree",
-             "fasta": fr"{MSA_DIR}\Transglutaminase_db_FAMSA_gt0.1_treeordered.fasta"}, # Done But Highlhy Divergent
-    "FliB": {"boundary": [["CAKQYU010000002.1_226","CAKQKE010000010.1_26"]],"hmmregion":0}, #Done One highly scoring clade is excluded because not in flagellar operon
+    "FliB": {"boundary": [["CAKQYU010000002.1_226","CAKQKE010000010.1_26"]],"hmmregion":0}, #Done 
     "MotX": {"boundary": [["AP025472.1_2530","CAAGDP010000202.1_7"]],"hmmregion":0,
                 "tree": fr"{HMM_TREE_DIR}\MotX_VIBPA_db_FAMSA_gt0.1_m8ordered.tree",
                 "fasta": fr"{MSA_DIR}\MotX_VIBPA_db_FAMSA_gt0.1_treeordered.fasta"
@@ -201,7 +196,7 @@ gene_boundaries = {
     "MotK": {"boundary": [["NC_007493.2_2953","NZ_JABFCX010000003.1_989"]],"hmmregion":0,
                 "tree": fr"{HMM_TREE_DIR}\MotK_db_FAMSA_gt0.1_m8ordered.tree",
                 "fasta": fr"{MSA_DIR}\MotK_db_FAMSA_gt0.1_treeordered.fasta"
-                }, #There are two TPR clades and we took both, but the first one seems more coherent within itself. These proteins are also not in operons.
+                }, #Done
     "FlrC": {"boundary": [["NZ_BBIU01000036.1_34","QKED01000117.1_6"]],"hmmregion":0}, #Done
     "FlrA": {"boundary": [["NZ_CP018616.1_1940","JAABTJ010000001.1_62"]],"hmmregion":0,
                 "tree": fr"{HMM_TREE_DIR}\FlrA_db_FAMSA_gt0.1_m8ordered.tree",
@@ -231,15 +226,11 @@ gene_boundaries = {
                 "tree": fr"{HMM_TREE_DIR}\FlaY_db_FAMSA_gt0.1_m8ordered.tree",
                 "fasta": fr"{MSA_DIR}\FlaY_db_FAMSA_gt0.1_treeordered.fasta"
                 },
-    "FapA": {"boundary": [["NZ_CP069213.1_501","JAFIGE010000066.1_15"]],"hmmregion":0,
-             "tree": fr"{HMM_TREE_DIR}\DUF342_hmm_E1000_db_FAMSA_gt0.1_hmmordered.tree",
-             "fasta": fr"{MSA_DIR}\DUF342_hmm_E1000_db_FAMSA_gt0.1_treeordered.fasta"
-    }, #There is a second clade with MinC protein
+    "FapA": {"boundary": [["NZ_CP069213.1_501","JAFIGE010000066.1_15"]],"hmmregion":0}, # second clade is MinC
     "DUF1217": {"boundary": [["NZ_MDET01000003.1_55","JACQAI010000194.1_6"]],"hmmregion":0},
     "DUF6470": {"boundary": [["NZ_CABKRX010000062.1_30","CP060226.1_2110"],["JAAYOS010000013.1_8","JAHHUB010000032.1_2"]], "hmmregion":0},
     "DUF327": {"boundary": [["CAJUQB010000006.1_41","JAJXUE010000021.1_9"]], "hmmregion":0},
     "Transglycosylase":{"boundary":[["UCEZ01000055.1_32","DFNM01000065.1_5"]],"hmmregion":0},
-    "DUF3383": {"boundary":[["NZ_AGUF01000046.1_97","JALFFX010000055.1_59"]],"hmmregion":0},
     "FljA" : {"boundary":[["NC_003197.2_2734","JAEWTL010000044.1_18"]],"hmmregion":0,
                 "tree": fr"{HMM_TREE_DIR}\FljA_db_FAMSA_gt0.1_m8ordered.tree",
                 "fasta": fr"{MSA_DIR}\FljA_db_FAMSA_gt0.1_treeordered.fasta"},

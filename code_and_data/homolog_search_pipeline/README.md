@@ -1,11 +1,15 @@
 # Homolog Search Pipeline
 
-This folder contains the scripts used to search for homologs of flagellar proteins before the post-processing steps. The two shell scripts are kept separate because they start from different input types:
+HMM/m8 search outputs and large alignment files for all genes are on [Zenodo](../../README.md#data-on-zenodo) (link to be added). This folder contains the search scripts and `input_sequences/` HMM/FASTA inputs used to search for homologs of flagellar proteins before the post-processing steps. The two shell scripts are kept separate because they start from different input types:
 
 - `hmm_search.sh` starts from HMM profiles and runs HMMER against the GTDB protein database.
 - `mmseqs2_search_pipeline.sh` starts from FASTA query sequences and runs MMseqs2 against the GTDB protein database.
 
-Both scripts retrieve matching GTDB sequences, build FASTA files, align the sequences with FAMSA, trim alignments with trimAl, and infer trees with FastTree.
+Both scripts retrieve matching GTDB sequences, build FASTA files, align the sequences with FAMSA, trim alignments with trimAl, and infer trees with FastTree (see versions below).
+
+## Alignment and tree inference
+
+FAMSA v2.2.230 was run with default settings. Alignment columns containing more than 90% gaps were trimmed using trimAl v1.431 with the `-gt 0.1` option, and gene trees were inferred from the trimmed alignments using FastTree v2.1.1132 (the OpenMP build `FastTreeMP` in the shell scripts).
 
 ## Required Software
 
@@ -13,17 +17,28 @@ The scripts assume access to a SLURM cluster and the following command-line tool
 
 - HMMER, for `hmm_search.sh`
 - MMseqs2
-- FAMSA
-- trimAl
-- FastTreeMP
+- FAMSA v2.2.2
+- trimAl v1.4
+- FastTree v2.1.11 (`FastTreeMP` binary)
 - Python 3
 
-The HMM-based script also requires the helper scripts:
+The HMM-based script also requires the helper scripts in this folder:
 
-- `hmm_header_get.py`
-- `trim_sequences_using_hmm.py`
+- `hmm_header_get.py` — parses `hmmsearch --tblout`-style `>>` headers from the search output and writes a one-accession-per-line file (`*_headers.txt`) for `mmseqs createsubdb`
+- `trim_sequences_using_hmm.py` — trims retrieved FASTA sequences to the HMM alignment region
 
-Set `SCRIPT_DIR` in `hmm_search.sh` to the folder containing these helper scripts.
+`hmm_search.sh` sets `SCRIPT_DIR` automatically to this directory. Override `SCRIPT_DIR` in the script only if you keep the helpers elsewhere.
+
+### `hmm_header_get.py`
+
+Called by `hmm_search.sh` after `hmmsearch`. Reads the text output (lines starting with `>>`), keeps the first *N* hits, and writes accessions for MMseqs2 subdatabase creation.
+
+```bash
+python hmm_header_get.py search_results/FapA/FapA_hmmsearch_E1000.txt 50000
+# -> search_results/FapA/FapA_hmmsearch_E1000_headers.txt
+```
+
+UniProt-style headers (`tr|ACCESSION|...`) are reduced to the accession token; other header formats use the first whitespace-delimited field.
 
 ## Required Databases
 
@@ -51,12 +66,14 @@ Expected layout:
 input_sequences/
   CsrA/
     CsrA.hmm
+  FapA/
+    FapA.hmm
   FlaG/
     FlaG.hmm
-  MotB2/
-    MotB2.fasta
-  FliH2/
-    FliH2.fasta
+  MotB/
+    MotB.fasta
+  FliH/
+    FliH.fasta
 ```
 
 For `hmm_search.sh`, each gene folder should contain one or more `.hmm` files:
@@ -88,13 +105,12 @@ Edit these values before running:
 
 ```bash
 PROJECT_DIR="/path/to/flagella"
-SCRIPT_DIR="/path/to/homolog_search_scripts"
 GTDB_MMSEQS_DB="/path/to/GTDB_mmseqs_db"
 GTDB_FASTA="/path/to/GTDB.fasta"
 FAMSA_BIN="/path/to/famsa"
 TRIMAL_BIN="/path/to/trimal"
 FASTTREE_BIN="/path/to/FastTreeMP"
-gene_names=(CsrA FlaG DUF3383)
+gene_names=(CsrA FlaG FapA)
 ```
 
 Also update the SLURM array range so it matches the number of genes. For example, three genes use:
@@ -171,10 +187,3 @@ Important outputs include:
 - `<gene>_db.fasta`
 - `<gene>_db_FAMSA_gt0.1.fasta`
 - `<gene>_db_FAMSA_gt0.1.tree`
-
-## Notes
-
-- Replace `#SBATCH --account=YOUR_ACCOUNT` with the correct account for your cluster.
-- Adjust memory, CPU count, and time limits based on the search size.
-- Keep `gene_names`, `fasta_files`, and the SLURM array range synchronized.
-- The outputs from this search stage are used by later post-processing scripts to order trees, inspect high-scoring regions, and extract homologous clades.

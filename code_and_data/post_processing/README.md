@@ -1,5 +1,9 @@
 # Post-processing
 
+Full search results, MSAs, mapping files, and the phyletic-distribution TSV are on [Zenodo](../../README.md#data-on-zenodo) (link to be added). This folder contains the scripts to run on those files.
+
+Homolog searches that feed this stage produce alignments with **FAMSA v2.2.230** (default settings), column trimming with **trimAl v1.431** (`-gt 0.1`, removing columns with more than 90% gaps), and gene trees with **FastTree v2.1.1132** (OpenMP build `FastTreeMP`; see `homolog_search_pipeline/README.md`).
+
 ## Step 1 — Order Trees and FASTAs by Search Score
 
 Scripts:
@@ -61,35 +65,65 @@ For `hmm` entries, the script expects HMMER output (`*_hmmsearch_E1000.txt`) and
 
 ## Step 2 — Identify Neighbors of Flagellar Genes
 
-Script: `find_neighboring_leafs_with_tree_order.py`
+Scripts:
+- `neighbors_treeorder.py`
+- `neighbor_plots.sh`
 
-This script checks whether selected genes occur near other flagellar genes on the same genome/contig. It compares gene pairs using hit coordinates from HMM or m8 output, matches those hits to the tree-ordered FASTA files, and writes interactive plots showing neighborhood signal along the alignment order. This helps determine which parts of a tree correspond to sequences located near specific flagellar genes.
+This step checks whether selected genes occur near other flagellar genes on the same genome/contig. For each focal gene, the script compares it against every other gene in `GENE_NAMES` using hit coordinates from HMM or m8 output, matches those hits to the tree-ordered FASTA files, and writes interactive plots showing neighborhood signal along the alignment order. This helps determine which parts of a tree correspond to sequences located near specific flagellar genes.
 
-### Inputs
+All inputs and outputs for a given gene live in one subfolder under `BASE_DIR` (see layout below). That keeps search hits, ordered alignments, and neighbor plots together for each gene.
 
-Set in the `USER CONFIGURATION` block.
+### Per-gene folder layout
+
+Under `BASE_DIR`, each gene has its own directory (`BASE_DIR/<gene>/`). The script discovers files in that folder:
+
+| File pattern | Role |
+|---|---|
+| `<gene>_hmmsearch_E1000.txt` | HMMER hits (preferred if present). |
+| `<gene>_GTDB_s7.5_filter0_eprofile10_db.m8` or `<gene>_GTDB*_db.m8` | MMseqs2 hits (used when no HMM file exists). |
+| `<gene>_hmm_E1000_db_FAMSA_gt0.1_treeordered.fasta` | Tree-ordered MSA for HMM-based genes (regular alignment). |
+| `<gene>_db_FAMSA_gt0.1_treeordered.fasta` | Tree-ordered MSA for m8-based genes (regular alignment). |
+| `<gene>_hmm_E1000_db_hmmregions_FAMSA_gt0.1_treeordered.fasta` | Tree-ordered hmmregions MSA (HMM genes only). |
+
+Neighbor logic is unchanged from the previous workflow: for each gene pair, hits are grouped by genome/contig and strand, sorted by genomic coordinate, and a sequence is marked as having a neighbor if the partner gene is immediately before or after it within `DISTANCE_THRESHOLD` (base pairs). The plot uses tree-ordered FASTA leaf order on the x-axis, bins sequences with `WINDOW_SIZE`, and sums neighboring hits per bin; separate lines are drawn for different partner genes. These plots are also used in Step 3 to help identify which tree regions are associated with nearby flagellar genes.
+
+### Configuration (`neighbors_treeorder.py`)
+
+Set at the top of `neighbors_treeorder.py`.
 
 | Variable | Description |
 |---|---|
-| `HMMSEARCH_DIR` | Folder containing `*_hmmsearch_E1000.txt` files and fallback `.m8` files. |
-| `MSA_DIR` | Folder containing tree-ordered FASTA alignments. |
-| `NEIGHBOR_HTML_DIR` | Folder where neighborhood plots are written. |
-
-`DISTANCE_THRESHOLD` sets the maximum allowed distance, in base pairs, between two genes for them to count as neighbors. For each gene pair, hits are grouped by genome/contig and strand, sorted by genomic coordinate, and a gene is marked as having a neighbor if the partner gene is immediately before or after it within this threshold.
-
-The plot uses the order of sequences in the tree-ordered FASTA as the x-axis. Genes are grouped into windows using `WINDOW_SIZE`, and the y-axis shows the summed number of neighboring hits in each window. Separate lines are drawn for different partner genes. These neighbor plots are also used in Step 3 to help identify which tree regions are associated with nearby flagellar genes.
+| `BASE_DIR` | Root folder; each gene is processed in `BASE_DIR/<gene>/`. |
+| `DISTANCE_THRESHOLD` | Maximum distance (bp) between genes to count as neighbors (default `500`). |
+| `WINDOW_SIZE` | Number of MSA positions per x-axis bin (default `50`). |
+| `SEQ_LIMIT` | Maximum hits read per HMM/m8 file (default `100000`). |
+| `GENE_NAMES` | List of flagellar genes to test as neighbors of the focal gene. |
 
 ### Outputs
 
+Written into the same gene folder as the inputs (`BASE_DIR/<gene>/`):
+
 | File | Contents |
 |---|---|
-| `<gene>_neighbors_*combined_lineplot.html` | Interactive plot summarizing neighboring-gene signal along the tree-ordered FASTA. |
+| `<gene>_neighbors_<DISTANCE_THRESHOLD>bp_lineplot.html` | Neighbor signal along the regular tree-ordered alignment. |
+| `<gene>_neighbors_hmmregions_<DISTANCE_THRESHOLD>bp_lineplot.html` | Same plot for the hmmregions alignment (HMM-based genes only). |
 
 ### How to run
 
-1. Fill in the paths in the `USER CONFIGURATION` block.
-2. Review `ALL_GENES` if the gene set changes.
-3. Run the script end-to-end, or step through the `#%%` cells in order.
+**Single gene (local or interactive):**
+
+```bash
+python neighbors_treeorder.py <GeneName>
+```
+
+**All genes (SLURM array):**
+
+1. Set `BASE_DIR` in `neighbors_treeorder.py`.
+2. In `neighbor_plots.sh`, set the Python virtualenv path, the path to `neighbors_treeorder.py`, and `gene_names` so they match your setup.
+3. Edit `#SBATCH --array` so it covers `0` through `len(gene_names) - 1`.
+4. Submit with `sbatch neighbor_plots.sh`.
+
+Each array task runs one gene; outputs are written into that gene’s folder under `BASE_DIR`.
 
 ## Step 3 — Identification of Flagellar Homologous Clades
 
@@ -126,6 +160,17 @@ Script: `map_phyletic_distribution.py`
 
 Takes the per-gene FASTA files of inferred homologs and produces a per-assembly phyletic-distribution table annotated with GTDB taxonomy and NCBI protein IDs. It also writes a diagnostic bar plot showing how many sequence headers are shared between gene pairs.
 
+Before counting and plotting, the script merges paralog/duplicate gene searches into a single column (`merge_paralog_columns`, driven by `PARALOG_MERGES` at the top of the script). Unique headers from the source search are appended to the target column; the source column is then dropped:
+
+| Source search (column removed) | Target column (combined) |
+|---|---|
+| `FlgR` | `FlrC` |
+| `FliF2` | `FliF` |
+| `MotB2` | `MotB` |
+| `FliH2` | `FliH` |
+
+All downstream outputs (`flagellar_genes_homologs.tsv`, the shared-header bar plot, and `flagellar_genes_phyletic_distribution_withIDs.tsv`) use these merged column names.
+
 ### Inputs
 
 Set in the `USER CONFIGURATION` block at the bottom of the script.
@@ -133,8 +178,9 @@ Set in the `USER CONFIGURATION` block at the bottom of the script.
 | Variable | Description |
 |---|---|
 | `INPUT_DIR` | Folder of per-gene FASTA files; filenames must end in `_treeordered_orthologs.fasta`. The gene name is taken as the portion before the first underscore. |
+| `HOMOLOGS_TSV` | Optional. Pre-built header table (e.g. Zenodo `flagellar_genes_homologs.tsv`). If set, skips `INPUT_DIR` and paralog merge (table should already use merged column names). |
 | `OUTPUT_DIR` | Folder where results are written. |
-| `METADATA_FILE` | GTDB bac120 metadata TSV (e.g. `bac120_metadata_r214.tsv`). |
+| `METADATA_FILE` | `bac120_metadata_r214.tsv` from [bac120_metadata_r214.tar.gz](https://data.ace.uq.edu.au/public/gtdb/data/releases/release214/214.0/bac120_metadata_r214.tar.gz) (GTDB release 214). |
 | `ASSEMBLY_MAP_FILE` | TSV with columns `genome_id` and `assembly`. |
 | `ID_CONVERSION_FILE` | TSV mapping GTDB protein IDs to NCBI protein IDs. |
 

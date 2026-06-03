@@ -403,21 +403,26 @@ def merge_paralog_columns(
 # -----------------------------------------------------------------------------
 # USER CONFIGURATION
 # Replace each path below with the corresponding location on your machine.
-# `INPUT_DIR`  : folder containing the per-gene `<gene>_..._treeordered_orthologs.fasta` files.
-# `OUTPUT_DIR` : folder where TSV/HTML results will be written.
-# `METADATA_FILE`      : GTDB bac120 metadata TSV (e.g. bac120_metadata_r214.tsv).
+# `INPUT_DIR`     : folder of `<gene>_..._treeordered_orthologs.fasta` (if not using HOMOLOGS_TSV).
+# `HOMOLOGS_TSV`  : optional pre-built homolog header table (one column per gene); skips FASTA scan.
+# `OUTPUT_DIR`    : folder where TSV/HTML results will be written.
+# `METADATA_FILE` : bac120_metadata_r214.tsv (extract from bac120_metadata_r214.tar.gz, GTDB release 214).
 # `ASSEMBLY_MAP_FILE`  : TSV with columns `genome_id` and `assembly`.
 # `ID_CONVERSION_FILE` : TSV mapping GTDB protein IDs to NCBI protein IDs.
 # -----------------------------------------------------------------------------
 INPUT_DIR          = r"/path/to/homologs"
+HOMOLOGS_TSV       = r""  # e.g. flagellar_genes_homologs.tsv from Zenodo; leave empty to read INPUT_DIR
 OUTPUT_DIR         = r"/path/to/output"
 METADATA_FILE      = r"/path/to/bac120_metadata_r214.tsv"
 ASSEMBLY_MAP_FILE  = r"/path/to/assembly_genome_mapping.tsv"
 ID_CONVERSION_FILE = r"/path/to/flagellar_id_conversion.txt"
 
-#%% Extract headers from fasta files
-headers_df = generate_sequence_headers_df(INPUT_DIR)
-headers_df = merge_paralog_columns(headers_df)
+#%% Load homolog headers (from TSV or ortholog FASTA folder)
+if HOMOLOGS_TSV:
+    headers_df = pd.read_csv(HOMOLOGS_TSV, sep="\t", dtype=str)
+else:
+    headers_df = generate_sequence_headers_df(INPUT_DIR)
+    headers_df = merge_paralog_columns(headers_df)
 
 #%% Calculate header overlap between inferred homologs
 headers_df.to_csv(os.path.join(OUTPUT_DIR, "flagellar_genes_homologs.tsv"), sep='\t', index=False)
