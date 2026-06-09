@@ -249,7 +249,10 @@ gene_boundaries = {
               "fasta": fr"{MSA_DIR}\MotB2_db_FAMSA_gt0.1_treeordered.fasta"},
     "FliH2" : {"boundary":[["NZ_CP022998.1_1258","JAFLCG010000011.1_137"]],"hmmregion":0,
               "tree": fr"{HMM_TREE_DIR}\FliH2_db_FAMSA_gt0.1_m8ordered.tree",
-              "fasta": fr"{MSA_DIR}\FliH2_db_FAMSA_gt0.1_treeordered.fasta"}
+              "fasta": fr"{MSA_DIR}\FliH2_db_FAMSA_gt0.1_treeordered.fasta"},
+    "FlgX": {"boundary": [["NZ_CP014991.1_809","NZ_MLAR01000006.1_81"],["NZ_NHYM01000007.1_20","DIZY01000072.1_24"],["NZ_LN831025.1_165","WGAU01000051.1_18"]],"hmmregion":0,
+            "tree": r"hmmorder_trees\FlgX_db_FAMSA_gt0.1_m8ordered.tree",
+            "fasta": r"treeorder_msa\FlgX_db_FAMSA_gt0.1_treeordered.fasta"},
     
 }
 print(gene_boundaries.keys())

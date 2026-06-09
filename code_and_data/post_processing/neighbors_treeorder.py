@@ -10,7 +10,7 @@ DISTANCE_THRESHOLD = 500
 WINDOW_SIZE = 50
 SEQ_LIMIT = 100000
 
-GENE_NAMES = ["CsrA", "DUF1217", "DUF327", "FapA", "DUF6470", "FlaF", "FlaG", "FlaY", "FlbT", "FlcA", "FlcB", "FlcC", "FlcD", "FlgA", "FlgB", "FlgC", "FlgD", "FlgE", "FlgF", "FlgG", "FlgH", "FlgI", "FlgJ", "FlgK", "FlgL", "FlgM", "FlgN", "FlgO", "FlgP", "FlgQ", "FlgR", "FlgT", "FlhA", "FlhB", "FlhC", "FlhD", "FlhE", "FlhF", "FlhG", "FliA", "FliB", "FliC", "FliD", "FliE", "FliF", "FliF2", "FliG", "FliH", "FliH2", "FliI", "FliJ", "FliK", "FliL", "FliM", "FliN", "FliO", "FliP", "FliQ", "FliR", "FliS", "FliT", "FliW", "FljA", "FlrA", "FlrC", "MotA", "MotB", "MotB2", "MotC", "MotE", "MotK", "MotX", "MotY", "PflA", "PflB", "PilZ", "Putative", "SwrA", "SwrB", "SwrD", "Transglycosylase", "YdiV", "YvyF", "FliZ"]
+GENE_NAMES = ["CsrA", "DUF1217", "DUF327", "FapA", "DUF6470", "FlaF", "FlaG", "FlaY", "FlbT", "FlcA", "FlcB", "FlcC", "FlcD", "FlgA", "FlgB", "FlgC", "FlgD", "FlgE", "FlgF", "FlgG", "FlgH", "FlgI", "FlgJ", "FlgK", "FlgL", "FlgM", "FlgN", "FlgO", "FlgP", "FlgQ", "FlgR", "FlgT", "FlhA", "FlhB", "FlhC", "FlhD", "FlhE", "FlhF", "FlhG", "FliA", "FliB", "FliC", "FliD", "FliE", "FliF", "FliF2", "FliG", "FliH", "FliH2", "FliI", "FliJ", "FliK", "FliL", "FliM", "FliN", "FliO", "FliP", "FliQ", "FliR", "FliS", "FliT", "FliW", "FljA", "FlrA", "FlrC", "MotA", "MotB", "MotB2", "MotC", "MotE", "MotK", "MotX", "MotY", "PflA", "PflB", "PilZ", "Putative", "SwrA", "SwrB", "SwrD", "Transglycosylase", "YdiV", "YvyF", "FliZ","FlgX"]
 
 
 def core_id(header):

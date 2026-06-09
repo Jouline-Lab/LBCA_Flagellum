@@ -1,11 +1,11 @@
-# LBCA Flagellum
+# GitHub Repository for the Manuscript titled "The last bacterial common ancestor encoded a complex flagellum".
 
 Code and example data for searching flagellar protein homologs in GTDB, curating orthologous sequences and trees, and building a flagella-based taxon phylogeny.
 
 ## Repository layout
 
 ```text
-LBCA_Flagellum/
+Repository/
 ├── code_and_data/
 │   ├── homolog_search_pipeline/   # Step 1 — homolog search, alignment, gene trees
 │   ├── post_processing/           # Steps 2–4 — order, neighbors, clade extraction, phyletic map
