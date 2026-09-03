@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+
+# Downloaded data: unpacked Zenodo archive + GTDB reference downloads.
+# Scripts default to this folder; override with the LBCA_DATA_DIR env var.
+external_data/
+
+# Interactive gene-presence matrix editor (working tool, not part of the published analysis)
+code_and_data/pipeline_benchmarking/flagella_matrix_editor.html

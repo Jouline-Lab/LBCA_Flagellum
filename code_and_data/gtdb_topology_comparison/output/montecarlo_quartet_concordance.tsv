@@ -1,0 +1,5 @@
+rank	n_tips	n_quartets_sampled	concordance_pct	ci95_low	ci95_high	chance_corrected_pct
+family	1072	2000000	85.782	85.733	85.830	78.672
+order	561	2000000	80.159	80.104	80.215	70.239
+class	246	2000000	73.291	73.230	73.353	59.937
+phylum	99	2000000	70.213	70.149	70.276	55.319

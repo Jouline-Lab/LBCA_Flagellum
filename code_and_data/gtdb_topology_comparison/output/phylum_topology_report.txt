@@ -1,0 +1,13 @@
+phylum-level topology comparison: GTDB r214 vs flagella phylogeny
+Matched taxa: 99
+
+GTDB nontrivial splits:     96 (fully resolved max = 96)
+Flagella nontrivial splits: 96 (fully resolved max = 96)
+
+Shared splits:              14
+Splits only in GTDB:        82
+Splits only in flagella:    82
+
+RF distance (raw):          164
+RF distance (max, n=99):    192
+RF distance (normalized):   0.8542

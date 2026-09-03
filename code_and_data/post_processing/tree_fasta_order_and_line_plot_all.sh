@@ -15,13 +15,22 @@ set -euo pipefail
 
 # -----------------------------------------------------------------------------
 # USER CONFIGURATION
-# Replace these paths with the corresponding locations on your system.
 # -----------------------------------------------------------------------------
-PROJECT_DIR="/path/to/flagella"
-SCRIPT_DIR="/path/to/post_processing_scripts"
+# SCRIPT_DIR is this script's own folder, so the Python helpers next to it are
+# found automatically.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-SEARCH_RESULTS_DIR="${PROJECT_DIR}/search_results"
-PYTHON_BIN="python3.9"
+# Per-gene search results. On a fresh checkout these come from
+# pipeline_files_per_gene.zip on Zenodo: unpack it into
+# ${REPO_ROOT}/external_data/pipeline_files_per_gene/ (git-ignored) and
+# decompress its .gz files. Set LBCA_DATA_DIR to use a different location, or
+# point SEARCH_RESULTS_DIR at your own homolog-search output.
+# See the repository root README, "Data on Zenodo".
+DATA_DIR="${LBCA_DATA_DIR:-${REPO_ROOT}/external_data}"
+SEARCH_RESULTS_DIR="${DATA_DIR}/pipeline_files_per_gene"
+
+PYTHON_BIN="python3"
 
 HMM_EVALUE=1000
 M8_EPROFILE=10
@@ -54,7 +63,7 @@ search_type="${search_types[$SLURM_ARRAY_TASK_ID]}"
 echo "Processing ${gene_name} with ${search_type} input"
 
 if [ "${search_type}" = "hmm" ]; then
-    base_dir="${SEARCH_RESULTS_DIR}/${gene_name}_15-2-2024"
+    base_dir="${SEARCH_RESULTS_DIR}/${gene_name}"
     querydb="${base_dir}/${gene_name}_hmm_E${HMM_EVALUE}_db"
     hmm_file="${base_dir}/${gene_name}_hmmsearch_E${HMM_EVALUE}.txt"
 

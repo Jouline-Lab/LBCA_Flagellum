@@ -16,10 +16,17 @@ module load hmmer/3.3.2
 # USER CONFIGURATION
 # Replace these paths with locations on your system.
 # -----------------------------------------------------------------------------
-PROJECT_DIR="/path/to/flagella"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INPUT_HMM_DIR="${PROJECT_DIR}/input_sequences"
-SEARCH_RESULTS_DIR="${PROJECT_DIR}/search_results"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# HMM/FASTA query inputs are tracked in this repository, next to this script.
+INPUT_HMM_DIR="${SCRIPT_DIR}/input_sequences"
+
+# Search results are too large to track, so they are written to the
+# repository's external data folder (git-ignored). Set LBCA_DATA_DIR to write
+# them elsewhere. See the repository root README, "Data on Zenodo".
+DATA_DIR="${LBCA_DATA_DIR:-${REPO_ROOT}/external_data}"
+SEARCH_RESULTS_DIR="${DATA_DIR}/pipeline_files_per_gene"
 
 GTDB_MMSEQS_DB="/path/to/GTDB_mmseqs_db"
 GTDB_FASTA="/path/to/GTDB.fasta"

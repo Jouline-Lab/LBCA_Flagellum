@@ -1,8 +1,8 @@
-# Post-processing
+# Stage 2 - Post-processing
 
 Full search results, MSAs, mapping files, and the phyletic-distribution TSV are on [Zenodo](../../README.md#data-on-zenodo) (link to be added). This folder contains the scripts to run on those files.
 
-Homolog searches that feed this stage produce alignments with **FAMSA v2.2.230** (default settings), column trimming with **trimAl v1.431** (`-gt 0.1`, removing columns with more than 90% gaps), and gene trees with **FastTree v2.1.1132** (OpenMP build `FastTreeMP`; see `homolog_search_pipeline/README.md`).
+Homolog searches that feed this stage produce alignments with **FAMSA v2.2.2** (default settings), column trimming with **trimAl v1.4** (`-gt 0.1`, removing columns with more than 90% gaps), and gene trees with **FastTree v2.1.11** (OpenMP build `FastTreeMP`; see `homolog_search_pipeline/README.md`).
 
 ## Step 1 — Order Trees and FASTAs by Search Score
 
@@ -42,10 +42,10 @@ Set in the `USER CONFIGURATION` block of `tree_fasta_order_and_line_plot_all.sh`
 
 | Variable | Description |
 |---|---|
-| `PROJECT_DIR` | Base project folder containing `search_results`. |
-| `SCRIPT_DIR` | Folder containing the Python helper scripts used by the shell script. |
 | `gene_names` | Example list of genes to process. Edit this list for the genes being run. |
 | `search_types` | Parallel list matching `gene_names`; each entry must be `hmm` or `m8`. |
+
+`SEARCH_RESULTS_DIR` and `SCRIPT_DIR` are derived automatically: the helper scripts are found next to the shell script, and per-gene search results are read from `external_data/pipeline_files_per_gene/` (see the root README, "Data on Zenodo"). Set `LBCA_DATA_DIR` to read them from elsewhere.
 
 For `hmm` entries, the script expects HMMER output (`*_hmmsearch_E1000.txt`) and runs both the `hmmregions` and full-length tree/FASTA variants. For `m8` entries, it expects MMseqs2 m8 output (`*_GTDB_s7.5_filter*_eprofile*_db.m8`) and runs the full-length variant.
 
@@ -59,7 +59,7 @@ For `hmm` entries, the script expects HMMER output (`*_hmmsearch_E1000.txt`) and
 
 ### How to run
 
-1. Fill in `PROJECT_DIR`, `SCRIPT_DIR`, and the other configuration values.
+1. Unpack the Zenodo per-gene archive as described in the root README.
 2. Edit `gene_names`, `search_types`, and the `#SBATCH --array` range so they match.
 3. Submit the shell script with `sbatch tree_fasta_order_and_line_plot_all.sh`.
 
@@ -93,7 +93,7 @@ Set at the top of `neighbors_treeorder.py`.
 
 | Variable | Description |
 |---|---|
-| `BASE_DIR` | Root folder; each gene is processed in `BASE_DIR/<gene>/`. |
+| `BASE_DIR` | Root folder; each gene is processed in `BASE_DIR/<gene>/`. Defaults to `external_data/pipeline_files_per_gene/` (see the root README, "Data on Zenodo"); set `LBCA_DATA_DIR` to read it from elsewhere. |
 | `DISTANCE_THRESHOLD` | Maximum distance (bp) between genes to count as neighbors (default `500`). |
 | `WINDOW_SIZE` | Number of MSA positions per x-axis bin (default `50`). |
 | `SEQ_LIMIT` | Maximum hits read per HMM/m8 file (default `100000`). |
@@ -118,10 +118,9 @@ python neighbors_treeorder.py <GeneName>
 
 **All genes (SLURM array):**
 
-1. Set `BASE_DIR` in `neighbors_treeorder.py`.
-2. In `neighbor_plots.sh`, set the Python virtualenv path, the path to `neighbors_treeorder.py`, and `gene_names` so they match your setup.
-3. Edit `#SBATCH --array` so it covers `0` through `len(gene_names) - 1`.
-4. Submit with `sbatch neighbor_plots.sh`.
+1. In `neighbor_plots.sh`, set `VENV_PATH` and `gene_names` to match your setup. The script finds `neighbors_treeorder.py` next to itself.
+2. Edit `#SBATCH --array` so it covers `0` through `len(gene_names) - 1`.
+3. Submit with `sbatch neighbor_plots.sh`.
 
 Each array task runs one gene; outputs are written into that gene’s folder under `BASE_DIR`.
 
@@ -137,20 +136,25 @@ Set in the `USER CONFIGURATION` block.
 
 | Variable | Description |
 |---|---|
-| `HMM_TREE_DIR` | Folder containing the HMM- and m8-ordered Newick trees. |
-| `MSA_DIR` | Folder containing the matching tree-ordered FASTA alignments. |
-| `ORTHOLOG_OUT_DIR` | Folder where extracted homolog FASTA files are written. |
+| `SEARCH_RESULTS_DIR` | Per-gene Step 1/2 output, one folder per gene (`<SEARCH_RESULTS_DIR>/<Gene>/<Gene>_...`). Defaults to `external_data/pipeline_files_per_gene/`, which is the layout of both the Zenodo archive and the homolog-search scripts' own output. |
+| `ORTHOLOG_OUT_DIR` | Folder where the extracted ortholog FASTAs and pruned ortholog trees are written. Defaults to `external_data/ortholog_lists/`. |
+
+Both default to the repository's `external_data/` folder (see the root README, "Data on Zenodo"); set `LBCA_DATA_DIR` to use a different location.
+
+A gene searched under a name other than the one used downstream carries a `search_name` key in its `gene_boundaries` entry: inputs are read under the search name, every output is written under the gene name. `FapA` is the one case, searched as its Pfam domain `DUF342`. A few trees were manually rerooted before their clade boundaries were read, because the automated outgroup rooting placed the root inaccurately; those copies are tracked in `rerooted_trees/` and referenced directly.
 
 ### Outputs
 
 | File | Contents |
 |---|---|
 | `<gene>_hmm_E1000_db_FAMSA_gt0.1_treeordered_orthologs.fasta` | Filtered FASTA containing the selected homologous sequences for each gene. |
-| `*_orthologs.tree` | Pruned tree containing only the extracted sequences. |
+| `*_orthologs.tree` | Pruned tree containing only the extracted sequences. These are the files tracked in `../flagella_based_phylogeny/orthologous_trees/`. |
+
+Both go to `ORTHOLOG_OUT_DIR`; the search-results folder is treated as read-only input.
 
 ### How to run
 
-1. Fill in the three paths in the `USER CONFIGURATION` block.
+1. Unpack the Zenodo per-gene archive as described in the root README.
 2. Review or edit `gene_boundaries` if needed.
 3. Run the script end-to-end, or step through the `#%%` cells in order.
 
@@ -169,7 +173,7 @@ Before counting and plotting, the script merges paralog/duplicate gene searches 
 | `MotB2` | `MotB` |
 | `FliH2` | `FliH` |
 
-All downstream outputs (`flagellar_genes_homologs.tsv`, the shared-header bar plot, and `flagellar_genes_phyletic_distribution_withIDs.tsv`) use these merged column names.
+All downstream outputs (`flagellar_genes_homologs.tsv`, the shared-header bar plot, and `flagellar_genes_phyletic_distribution.tsv`) use these merged column names.
 
 ### Inputs
 
@@ -177,12 +181,14 @@ Set in the `USER CONFIGURATION` block at the bottom of the script.
 
 | Variable | Description |
 |---|---|
-| `INPUT_DIR` | Folder of per-gene FASTA files; filenames must end in `_treeordered_orthologs.fasta`. The gene name is taken as the portion before the first underscore. |
-| `HOMOLOGS_TSV` | Optional. Pre-built header table (e.g. Zenodo `flagellar_genes_homologs.tsv`). If set, skips `INPUT_DIR` and paralog merge (table should already use merged column names). |
-| `OUTPUT_DIR` | Folder where results are written. |
+| `INPUT_DIR` | Your own Step 3 output: per-gene FASTA files whose names end in `_treeordered_orthologs.fasta`. The gene name is taken as the portion before the first underscore. Defaults to `external_data/ortholog_lists/`. |
+| `HOMOLOGS_TSV` | Pre-built header table, `flagellar_genes_homologs.tsv` from Zenodo. **Read in preference to `INPUT_DIR` whenever the file exists**, which skips the FASTA scan and the paralog merge, since the table already uses merged column names. Delete or rename it to rebuild from `INPUT_DIR` instead. |
+| `OUTPUT_DIR` | Folder where results are written. Defaults to `external_data/output/`, created if missing. |
 | `METADATA_FILE` | `bac120_metadata_r214.tsv` from [bac120_metadata_r214.tar.gz](https://data.ace.uq.edu.au/public/gtdb/data/releases/release214/214.0/bac120_metadata_r214.tar.gz) (GTDB release 214). |
-| `ASSEMBLY_MAP_FILE` | TSV with columns `genome_id` and `assembly`. |
-| `ID_CONVERSION_FILE` | TSV mapping GTDB protein IDs to NCBI protein IDs. |
+| `ASSEMBLY_MAP_FILE` | `assembly_genome_mapping.tsv` from Zenodo; columns `genome_id` and `assembly`. |
+| `ID_CONVERSION_FILE` | `flagellar_id_conversion.txt` from Zenodo; maps GTDB protein IDs to NCBI protein IDs. |
+
+All six default to the repository's `external_data/` folder (see the root README, "Data on Zenodo"); set `LBCA_DATA_DIR` to use a different location.
 
 ### Outputs (written to `OUTPUT_DIR`)
 
@@ -190,7 +196,7 @@ Set in the `USER CONFIGURATION` block at the bottom of the script.
 |---|---|
 | `flagellar_genes_homologs.tsv` | One column per gene listing the retained FASTA headers. |
 | `shared_headers_homologs_barplot.html` | Bar plot of shared headers between gene pairs. |
-| `flagellar_genes_phyletic_distribution_withIDs.tsv` | Per-assembly gene counts, GTDB and NCBI protein IDs, and GTDB taxonomy. |
+| `flagellar_genes_phyletic_distribution.tsv` | Per-assembly gene counts, GTDB and NCBI protein IDs, and GTDB taxonomy. This is the file every later stage reads, and the one deposited on Zenodo. |
 
 ### Dependencies
 
@@ -198,5 +204,21 @@ Set in the `USER CONFIGURATION` block at the bottom of the script.
 
 ### How to run
 
-1. Fill in the five paths in the `USER CONFIGURATION` block.
+1. Place the Zenodo and GTDB files as described in the root README.
 2. Run the script end-to-end, or step through the `#%%` cells in order.
+
+## Figure S1 — FliI pipeline demonstration
+
+Folder: [`Figure_S1_FliI/`](Figure_S1_FliI/README.md)
+
+A self-contained HTML figure that walks through Steps 1 to 3 for one example
+gene, FliI, showing all four signals on one shared x-axis (leaf order in the
+HMM-score-ordered gene tree): the tree-ordered MSA, the HMM score and search-rank
+index from Step 1, the top 5 neighboring-gene signals from Step 2, and the gene
+tree itself, with the clade finally retained in Step 3 highlighted across every
+track. It is the visual answer to "how was each ortholog set actually chosen".
+
+FliI's five source files are small enough to track, so they are committed under
+`Figure_S1_FliI/data/` and the figure rebuilds from a plain checkout with nothing
+to download. See that folder's README for the track-by-track description and how
+to rebuild it.

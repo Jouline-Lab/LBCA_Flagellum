@@ -1,4 +1,4 @@
-# Homolog Search Pipeline
+# Stage 1 - Homolog search pipeline
 
 HMM/m8 search outputs and large alignment files for all genes are on [Zenodo](../../README.md#data-on-zenodo) (link to be added). This folder contains the search scripts and `input_sequences/` HMM/FASTA inputs used to search for homologs of flagellar proteins before the post-processing steps. The two shell scripts are kept separate because they start from different input types:
 
@@ -9,7 +9,7 @@ Both scripts retrieve matching GTDB sequences, build FASTA files, align the sequ
 
 ## Alignment and tree inference
 
-FAMSA v2.2.230 was run with default settings. Alignment columns containing more than 90% gaps were trimmed using trimAl v1.431 with the `-gt 0.1` option, and gene trees were inferred from the trimmed alignments using FastTree v2.1.1132 (the OpenMP build `FastTreeMP` in the shell scripts).
+FAMSA v2.2.2 was run with default settings. Alignment columns containing more than 90% gaps were trimmed using trimAl v1.4 with the `-gt 0.1` option, and gene trees were inferred from the trimmed alignments using FastTree v2.1.11 (the OpenMP build `FastTreeMP` in the shell scripts).
 
 ## Required Software
 
@@ -58,7 +58,7 @@ Update these paths in the `USER CONFIGURATION` section of each script before run
 
 ## Input Folder
 
-The scripts expect an `input_sequences` folder inside `PROJECT_DIR`. You can add this folder here so other users can rerun the same searches with the same proteins or models.
+The query models and sequences are tracked in this repository, in the `input_sequences/` folder next to the two scripts, which find it automatically. Search results are written to `pipeline_files_per_gene/<gene>/` inside the repository's `external_data/` folder (see the root README, "Data on Zenodo"); set `LBCA_DATA_DIR` to write them elsewhere.
 
 Expected layout:
 
@@ -104,7 +104,6 @@ Main steps:
 Edit these values before running:
 
 ```bash
-PROJECT_DIR="/path/to/flagella"
 GTDB_MMSEQS_DB="/path/to/GTDB_mmseqs_db"
 GTDB_FASTA="/path/to/GTDB.fasta"
 FAMSA_BIN="/path/to/famsa"
@@ -112,6 +111,8 @@ TRIMAL_BIN="/path/to/trimal"
 FASTTREE_BIN="/path/to/FastTreeMP"
 gene_names=(CsrA FlaG FapA)
 ```
+
+Input and output folders are derived from the script's own location and need no editing.
 
 Also update the SLURM array range so it matches the number of genes. For example, three genes use:
 
@@ -128,7 +129,7 @@ sbatch hmm_search.sh
 Main outputs are written to:
 
 ```text
-search_results/<gene>/
+external_data/pipeline_files_per_gene/<gene>/
 ```
 
 Important outputs include:
@@ -155,13 +156,14 @@ Main steps:
 Edit these values before running:
 
 ```bash
-PROJECT_DIR="/path/to/flagella"
 GTDB_MMSEQS_DB="/path/to/GTDB_mmseqs_db"
 FAMSA_BIN="/path/to/famsa"
 TRIMAL_BIN="/path/to/trimal"
 FASTTREE_BIN="/path/to/FastTreeMP"
 fasta_files=(MotB2.fasta FliH2.fasta FliF2.fasta)
 ```
+
+Input and output folders are derived from the script's own location and need no editing.
 
 Also update the SLURM array range so it matches the number of FASTA files. For example, three FASTA files use:
 
@@ -178,7 +180,7 @@ sbatch mmseqs2_search_pipeline.sh
 Main outputs are written to:
 
 ```text
-search_results/<gene>/
+external_data/pipeline_files_per_gene/<gene>/
 ```
 
 Important outputs include:

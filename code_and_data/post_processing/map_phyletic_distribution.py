@@ -402,23 +402,33 @@ def merge_paralog_columns(
 
 # -----------------------------------------------------------------------------
 # USER CONFIGURATION
-# Replace each path below with the corresponding location on your machine.
 # `INPUT_DIR`     : folder of `<gene>_..._treeordered_orthologs.fasta` (if not using HOMOLOGS_TSV).
-# `HOMOLOGS_TSV`  : optional pre-built homolog header table (one column per gene); skips FASTA scan.
+# `HOMOLOGS_TSV`  : pre-built homolog header table (one column per gene); skips the FASTA scan.
 # `OUTPUT_DIR`    : folder where TSV/HTML results will be written.
 # `METADATA_FILE` : bac120_metadata_r214.tsv (extract from bac120_metadata_r214.tar.gz, GTDB release 214).
 # `ASSEMBLY_MAP_FILE`  : TSV with columns `genome_id` and `assembly`.
 # `ID_CONVERSION_FILE` : TSV mapping GTDB protein IDs to NCBI protein IDs.
+#
+# All of these default to the repository's external data folder
+# (<repo root>/external_data/, git-ignored). Unpack the Zenodo archive and the
+# GTDB metadata download there, or set LBCA_DATA_DIR to wherever you unpacked
+# them. `INPUT_DIR` is your own Step 3 output; the Zenodo archive provides
+# `HOMOLOGS_TSV` instead, which is read in preference to it when present.
+# See the repository root README, "Data on Zenodo".
 # -----------------------------------------------------------------------------
-INPUT_DIR          = r"/path/to/homologs"
-HOMOLOGS_TSV       = r""  # e.g. flagellar_genes_homologs.tsv from Zenodo; leave empty to read INPUT_DIR
-OUTPUT_DIR         = r"/path/to/output"
-METADATA_FILE      = r"/path/to/bac120_metadata_r214.tsv"
-ASSEMBLY_MAP_FILE  = r"/path/to/assembly_genome_mapping.tsv"
-ID_CONVERSION_FILE = r"/path/to/flagellar_id_conversion.txt"
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+DATA_DIR = os.environ.get("LBCA_DATA_DIR", os.path.join(REPO_ROOT, "external_data"))
+
+INPUT_DIR          = os.path.join(DATA_DIR, "ortholog_lists")
+HOMOLOGS_TSV       = os.path.join(DATA_DIR, "flagellar_genes_homologs.tsv")  # Zenodo
+OUTPUT_DIR         = os.path.join(DATA_DIR, "output")
+METADATA_FILE      = os.path.join(DATA_DIR, "bac120_metadata_r214.tsv")      # GTDB download
+ASSEMBLY_MAP_FILE  = os.path.join(DATA_DIR, "assembly_genome_mapping.tsv")   # Zenodo
+ID_CONVERSION_FILE = os.path.join(DATA_DIR, "flagellar_id_conversion.txt")   # Zenodo
 
 #%% Load homolog headers (from TSV or ortholog FASTA folder)
-if HOMOLOGS_TSV:
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+if os.path.isfile(HOMOLOGS_TSV):
     headers_df = pd.read_csv(HOMOLOGS_TSV, sep="\t", dtype=str)
 else:
     headers_df = generate_sequence_headers_df(INPUT_DIR)
@@ -439,4 +449,4 @@ merged_df = process_metadata_and_merge(
     convert_gtdb_ids_to_ncbi=True,
     id_conversion_file=ID_CONVERSION_FILE,
 )
-merged_df.to_csv(os.path.join(OUTPUT_DIR, "flagellar_genes_phyletic_distribution_withIDs.tsv"), sep='\t', index=False)
+merged_df.to_csv(os.path.join(OUTPUT_DIR, "flagellar_genes_phyletic_distribution.tsv"), sep='\t', index=False)

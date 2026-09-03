@@ -1,0 +1,5 @@
+rank	n_matched	rf_raw	rf_normalized
+family	1072	1496	0.6997
+order	561	818	0.7330
+class	246	392	0.8066
+phylum	99	164	0.8542

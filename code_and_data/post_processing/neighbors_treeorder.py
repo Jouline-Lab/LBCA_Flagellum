@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 from pathlib import Path
 import pandas as pd
 import plotly.express as px
 
-BASE_DIR = Path("/fs/scratch/PAS1794/selcuk.1/search_results")
+# Per-gene search results. On a fresh checkout these come from
+# pipeline_files_per_gene.zip on Zenodo: unpack it into
+# <repo root>/external_data/pipeline_files_per_gene/ (git-ignored) and
+# decompress its .gz files, or set LBCA_DATA_DIR to wherever you unpacked it.
+# Point BASE_DIR at your own search_results/ instead when rerunning the search.
+# See the repository root README, "Data on Zenodo".
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = Path(os.environ.get("LBCA_DATA_DIR", REPO_ROOT / "external_data"))
+BASE_DIR = DATA_DIR / "pipeline_files_per_gene"
 DISTANCE_THRESHOLD = 500
 WINDOW_SIZE = 50
 SEQ_LIMIT = 100000

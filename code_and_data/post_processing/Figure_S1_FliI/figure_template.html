@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Figure S1 — FliI orthologous-group identification pipeline</title>
+<style>
+  :root {
+    --ink: #1c1c1c;
+    --sub: #5a5a5a;
+    --line: #d8d8d4;
+    --panel-bg: #ffffff;
+    --page-bg: #f4f4f2;
+    --highlight: 214, 158, 46;
+    --accent: #2f5d8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px 60px;
+    background: var(--page-bg);
+    color: var(--ink);
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .sheet {
+    width: 100%;
+    max-width: 1180px;
+    background: var(--panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 28px 32px 24px;
+  }
+  h1 {
+    font-size: 17px;
+    margin: 0 0 4px;
+    font-weight: 600;
+  }
+  .subtitle {
+    font-size: 12.5px;
+    color: var(--sub);
+    margin: 0 0 10px;
+    line-height: 1.5;
+  }
+  .legend-list {
+    font-size: 12.5px;
+    color: var(--sub);
+    line-height: 1.55;
+    margin: 0 0 18px;
+    padding-left: 19px;
+  }
+  .legend-list li {
+    margin-bottom: 7px;
+  }
+  .legend-list li:last-child {
+    margin-bottom: 0;
+  }
+  .legend-list b {
+    color: var(--ink);
+  }
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    font-size: 11.5px;
+    color: var(--sub);
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    background: #faf9f6;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .stats b { color: var(--ink); }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 10px;
+  }
+  button#swapBtn {
+    font-size: 11.5px;
+    padding: 6px 12px;
+    border: 1px solid #b9b9b3;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  button#swapBtn:hover { background: #f0efe9; }
+
+  .figure-panel {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #b9b9b3;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .label-col {
+    display: flex;
+    flex-direction: column;
+    width: 95px;
+    flex: 0 0 95px;
+    background: #faf9f6;
+    border-right: 1px solid #b9b9b3;
+  }
+  .vlabel {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--ink);
+    overflow: visible;
+  }
+  .vline {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 31.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .canvas-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .canvas-col canvas {
+    display: block;
+    width: 100%;
+  }
+  .axis-caption {
+    font-size: 10px;
+    color: var(--sub);
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 2px 0 97px;
+  }
+  .divider {
+    height: 1px;
+    background: var(--line);
+    margin: 18px 0;
+  }
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+    margin-top: 6px;
+  }
+  .legend-group {
+    font-size: 10.5px;
+    color: var(--sub);
+  }
+  .legend-title {
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 5px;
+  }
+  .swatch-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .swatch i {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    display: inline-block;
+    border: 1px solid rgba(0,0,0,0.12);
+  }
+  .swatch.line i {
+    height: 3px;
+    border-radius: 2px;
+    border: none;
+  }
+  .highlight-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .highlight-note i {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    background: rgba(var(--highlight), 0.35);
+    border: 1px solid rgba(var(--highlight), 0.7);
+  }
+  footer {
+    margin-top: 20px;
+    font-size: 10px;
+    color: #8a8a84;
+    line-height: 1.6;
+  }
+  footer code {
+    background: #f2f1ec;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>Figure S1. Example of the orthologous-group identification pipeline (FliI)</h1>
+  <p class="subtitle">
+    All tracks share one x-axis: leaf order in the HMM-score-ordered gene tree (highest-scoring
+    sequences to the left). The panel order can be swapped below; the tree itself always stays at
+    the bottom, oriented so leaves sit at the top of its track and the root at the bottom.
+  </p>
+
+  <div class="stats" id="statsBar"></div>
+
+  <div class="toolbar">
+    <div style="font-size:11px;color:var(--sub);">Shared x-axis: <b id="nLeavesLabel"></b> tree leaves, binned every <b id="binSizeLabel"></b> leaves</div>
+    <div style="display:flex;gap:8px;">
+      <button id="swapBtn">Swap MSA / line-plot order</button>
+      <button id="downloadSvgBtn">Download SVG</button>
+    </div>
+  </div>
+
+  <div class="figure-panel">
+    <div class="label-col" id="labelCol"></div>
+    <div class="canvas-col" id="canvasCol"></div>
+  </div>
+  <div class="axis-caption"><span>&larr; higher-scoring leaves</span><span>lower-scoring leaves &rarr;</span></div>
+
+  <div class="divider"></div>
+
+  <div class="legend-row">
+    <div class="legend-group">
+      <div class="legend-title">MSA — majority residue class per bin&times;column</div>
+      <div class="swatch-list" id="msaLegend"></div>
+    </div>
+    <div class="legend-group">
+      <div class="legend-title">Extracted clade</div>
+      <div class="swatch-list">
+        <span class="swatch highlight-note"><i></i> Retained FliI orthologous group</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Generated by <code>build_figure_data.py</code> from the Step 1/2 outputs for FliI
+    (<code id="srcTree"></code>, <code id="srcMsa"></code>, <code id="srcScore"></code>,
+    <code id="srcNeighbor"></code>; see <code>post_processing/README.md</code>).
+    All source files are copied into <code>data/</code> alongside this figure for reproducibility.
+  </footer>
+</div>
+
+<script>
+const DATA = __FIGURE_DATA_JSON__;
+
+function hexToRgb(hex) {
+  const v = parseInt(hex.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+function fmt(n) { return n.toLocaleString('en-US'); }
+
+// ---------------------------------------------------------------- header info
+document.getElementById('nLeavesLabel').textContent = fmt(DATA.n_leaves);
+document.getElementById('binSizeLabel').textContent = DATA.bin_size;
+document.getElementById('srcTree').textContent = DATA.sources.full_tree;
+document.getElementById('srcMsa').textContent = DATA.sources.msa_fasta;
+document.getElementById('srcScore').textContent = DATA.sources.score_lineplot_html;
+document.getElementById('srcNeighbor').textContent = DATA.sources.neighbor_lineplot_html;
+
+document.getElementById('statsBar').innerHTML = `
+  <span>Gene: <b>${DATA.gene}</b></span>
+  <span>Total tree-ordered leaves: <b>${fmt(DATA.n_leaves)}</b></span>
+  <span>Retained orthologs: <b>${fmt(DATA.n_ortholog_leaves)}</b> (${(100*DATA.n_ortholog_leaves/DATA.n_leaves).toFixed(1)}%)</span>
+  <span>Alignment length: <b>${DATA.aln_len}</b> columns</span>
+  <span>Bins: <b>${DATA.n_bins}</b> &times; ${DATA.bin_size} leaves</span>
+`;
+
+const msaCatLabels = {gap:'gap', hydrophobic:'hydrophobic', polar:'polar/neutral', acidic:'acidic (D/E)', basic:'basic (K/R/H)', other:'other/ambiguous'};
+document.getElementById('msaLegend').innerHTML = DATA.msa.categories.map((c,i) =>
+  `<span class="swatch"><i style="background:${DATA.msa.colors[i]}"></i>${msaCatLabels[c] || c}</span>`
+).join('');
+
+// ---------------------------------------------------------------- geometry
+const nBins = DATA.n_bins;
+const hlX0 = DATA.highlight_bin_start;
+const hlX1 = DATA.highlight_bin_end;
+const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+function setupCanvas(canvas, cssWidth, cssHeight) {
+  canvas.style.height = cssHeight + 'px';
+  canvas.width = Math.round(cssWidth * DPR);
+  canvas.height = Math.round(cssHeight * DPR);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  return { ctx, w: cssWidth, h: cssHeight };
+}
+
+function paintHighlight(ctx, w, h) {
+  const x0 = (hlX0 / nBins) * w;
+  const x1 = (hlX1 / nBins) * w;
+  ctx.save();
+  ctx.fillStyle = `rgba(${DATA_HIGHLIGHT_RGB.join(',')},0.16)`;
+  ctx.fillRect(x0, 0, Math.max(1, x1 - x0), h);
+  ctx.strokeStyle = `rgba(${DATA_HIGHLIGHT_RGB.join(',')},0.55)`;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1, 0); ctx.lineTo(x1, h); ctx.stroke();
+  ctx.restore();
+}
+const DATA_HIGHLIGHT_RGB = [214, 158, 46];
+
+// ---------------------------------------------------------------- top annotation strip
+function drawAnnotation(canvas, w, h) {
+  const { ctx } = setupCanvas(canvas, w, h);
+  const x0 = (hlX0 / nBins) * w;
+  const x1 = (hlX1 / nBins) * w;
+  const cx = (x0 + x1) / 2;
+  ctx.save();
+  ctx.font = '600 31.5px "Segoe UI", Helvetica, Arial, sans-serif';
+  ctx.fillStyle = '#1c1c1c';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Inferred Orthologous Group', cx, h / 2);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- MSA track
+let msaBitmap = null;
+function buildMsaBitmap() {
+  if (msaBitmap) return msaBitmap;
+  const alnLen = DATA.aln_len;
+  const colors = DATA.msa.colors.map(hexToRgb);
+  const off = document.createElement('canvas');
+  off.width = nBins;
+  off.height = alnLen;
+  const octx = off.getContext('2d');
+  const img = octx.createImageData(nBins, alnLen);
+  const catRows = DATA.msa.cat_rows;
+  const fracRows = DATA.msa.frac_rows;
+  for (let row = 0; row < alnLen; row++) {
+    const catRow = catRows[row];
+    const fracRow = fracRows[row];
+    const rowOff = row * nBins * 4;
+    for (let col = 0; col < nBins; col++) {
+      const cat = catRow.charCodeAt(col) - 48;
+      const frac = parseInt(fracRow[col], 16) / 15;
+      const base = colors[cat];
+      const idx = rowOff + col * 4;
+      img.data[idx]     = Math.round(255 + (base[0] - 255) * frac);
+      img.data[idx + 1] = Math.round(255 + (base[1] - 255) * frac);
+      img.data[idx + 2] = Math.round(255 + (base[2] - 255) * frac);
+      img.data[idx + 3] = 255;
+    }
+  }
+  octx.putImageData(img, 0, 0);
+  msaBitmap = off;
+  return off;
+}
+
+function drawMsa(canvas, w, h) {
+  const { ctx } = setupCanvas(canvas, w, h);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(buildMsaBitmap(), 0, 0, nBins, DATA.aln_len, 0, 0, w, h);
+  paintHighlight(ctx, w, h);
+}
+
+// ---------------------------------------------------------------- score / neighbor line tracks
+function drawBaseline(ctx, w, h) {
+  ctx.save();
+  ctx.strokeStyle = '#bdbdb6';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h - 0.5);
+  ctx.lineTo(w, h - 0.5);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawRightMiddleLegend(ctx, w, h, items) {
+  const fontPx = 31.5 * 0.75;
+  const lineHeight = fontPx * 1.2;
+  const padX = 12;
+  const padY = 10;
+  const right = w - 16;
+  ctx.save();
+  ctx.font = `600 ${fontPx}px "Segoe UI", Helvetica, Arial, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'right';
+  let maxWidth = 0;
+  items.forEach(it => { maxWidth = Math.max(maxWidth, ctx.measureText(it.label).width); });
+  const blockHeight = items.length * lineHeight;
+  const startY = h / 2 - blockHeight / 2 + lineHeight / 2;
+  const boxL = right - maxWidth - padX;
+  const boxR = right + padX * 0.6;
+  const boxT = h / 2 - blockHeight / 2 - padY;
+  const boxB = h / 2 + blockHeight / 2 + padY;
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  roundRect(ctx, boxL, boxT, boxR - boxL, boxB - boxT, 7);
+  ctx.fill();
+  items.forEach((it, i) => {
+    const y = startY + i * lineHeight;
+    ctx.fillStyle = it.color;
+    ctx.fillText(it.label, right, y);
+  });
+  ctx.restore();
+}
+
+function drawLineSeries(ctx, w, h, series, colors, yMax, yMin) {
+  yMin = yMin || 0;
+  series.forEach((vals, si) => {
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < vals.length; i++) {
+      const v = vals[i];
+      if (v === null || v === undefined || Number.isNaN(v)) { started = false; continue; }
+      const x = ((i + 0.5) / vals.length) * w;
+      const y = h - ((v - yMin) / (yMax - yMin)) * h;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = colors[si];
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  });
+}
+
+function drawScore(canvas, w, h) {
+  const { ctx } = setupCanvas(canvas, w, h);
+  const s = DATA.score;
+  drawLineSeries(ctx, w, h, [s.norm_index_smoothed_mean, s.score_smoothed_mean], ['#b7b0a2', '#2f5d8a'], 1, 0);
+  paintHighlight(ctx, w, h);
+  drawBaseline(ctx, w, h);
+  drawRightMiddleLegend(ctx, w, h, [
+    { label: 'Normalized Score', color: '#2f5d8a' },
+    { label: 'Normalized Index', color: '#b7b0a2' },
+  ]);
+}
+
+function drawNeighbors(canvas, w, h) {
+  const { ctx } = setupCanvas(canvas, w, h);
+  const genes = DATA.neighbors.genes;
+  const series = genes.map(g => DATA.neighbors.values[g]);
+  let yMax = 1;
+  series.forEach(vals => vals.forEach(v => { if (v > yMax) yMax = v; }));
+  yMax *= 1.1;
+  drawLineSeries(ctx, w, h, series, DATA.neighbors.colors, yMax, 0);
+  paintHighlight(ctx, w, h);
+  drawBaseline(ctx, w, h);
+  drawRightMiddleLegend(ctx, w, h, genes.map((g, i) => ({ label: g, color: DATA.neighbors.colors[i] })));
+}
+
+// ---------------------------------------------------------------- tree track
+function drawTree(canvas, w, h) {
+  const { ctx } = setupCanvas(canvas, w, h);
+  const maxDepth = DATA.tree.max_depth || 1;
+  const xPix = (binX) => (binX / nBins) * w;
+  const yPix = (depth) => h - (depth / maxDepth) * h;
+
+  paintHighlight(ctx, w, h);
+
+  ctx.strokeStyle = '#5b5b56';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  DATA.tree.h.forEach(([x0, x1, y]) => {
+    const py = yPix(y);
+    ctx.moveTo(xPix(x0), py);
+    ctx.lineTo(xPix(x1), py);
+  });
+  DATA.tree.v.forEach(([x, y0, y1]) => {
+    const px = xPix(x);
+    ctx.moveTo(px, yPix(y0));
+    ctx.lineTo(px, yPix(y1));
+  });
+  ctx.stroke();
+}
+
+// ---------------------------------------------------------------- assemble + swap
+const ANNOT_HEIGHT = 54;
+const MSA_HEIGHT = 240;
+const SCORE_HEIGHT = 200;
+const NEIGHBOR_HEIGHT = 200;
+const TREE_HEIGHT = 260;
+
+function trackDefs() {
+  const annotation = { label: [], height: ANNOT_HEIGHT, draw: drawAnnotation };
+  const msa = { label: ['MSA'], height: MSA_HEIGHT, draw: drawMsa };
+  const score = { label: ['HMM Search'], height: SCORE_HEIGHT, draw: drawScore };
+  const neighbors = { label: ['Neighbors'], height: NEIGHBOR_HEIGHT, draw: drawNeighbors };
+  const tree = { label: ['Ordered Tree'], height: TREE_HEIGHT, draw: drawTree };
+  const upper = swapped ? [score, neighbors, msa] : [msa, score, neighbors];
+  return [annotation, ...upper, tree];
+}
+
+let swapped = false;
+function render() {
+  const labelCol = document.getElementById('labelCol');
+  const canvasCol = document.getElementById('canvasCol');
+  labelCol.innerHTML = '';
+  canvasCol.innerHTML = '';
+
+  const panelWidth = document.querySelector('.figure-panel').clientWidth - 96; // minus label col + border
+  const tracks = trackDefs();
+
+  tracks.forEach(t => {
+    const lbl = document.createElement('div');
+    lbl.className = 'vlabel';
+    lbl.style.height = t.height + 'px';
+    t.label.forEach(line => {
+      const span = document.createElement('span');
+      span.className = 'vline';
+      span.textContent = line;
+      lbl.appendChild(span);
+    });
+    labelCol.appendChild(lbl);
+
+    const canvas = document.createElement('canvas');
+    canvasCol.appendChild(canvas);
+    t.draw(canvas, panelWidth, t.height);
+  });
+}
+
+function escapeXml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
+}
+
+function downloadSvg() {
+  const labelCol = document.getElementById('labelCol');
+  const canvasCol = document.getElementById('canvasCol');
+  const canvases = Array.from(canvasCol.querySelectorAll('canvas'));
+  const labelDivs = Array.from(labelCol.querySelectorAll('.vlabel'));
+  if (!canvases.length) return;
+
+  const labelColWidth = labelCol.getBoundingClientRect().width;
+  const panelWidth = labelColWidth + canvases[0].getBoundingClientRect().width;
+  const totalHeight = canvases.reduce((sum, c) => sum + c.getBoundingClientRect().height, 0);
+
+  let y = 0;
+  let imagesXml = '';
+  let labelsXml = '';
+  canvases.forEach((canvas, i) => {
+    const cssW = canvas.getBoundingClientRect().width;
+    const cssH = canvas.getBoundingClientRect().height;
+    const dataUrl = canvas.toDataURL('image/png');
+    imagesXml += `<image x="${labelColWidth}" y="${y}" width="${cssW}" height="${cssH}" href="${dataUrl}" preserveAspectRatio="none"/>\n`;
+
+    const text = (labelDivs[i] && labelDivs[i].textContent.trim()) || '';
+    if (text) {
+      const cx = labelColWidth / 2;
+      const cy = y + cssH / 2;
+      labelsXml += `<text x="${cx}" y="${cy}" transform="rotate(-90 ${cx} ${cy})" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="31.5" font-weight="600" fill="#1c1c1c">${escapeXml(text)}</text>\n`;
+    }
+    y += cssH;
+  });
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${panelWidth}" height="${totalHeight}" viewBox="0 0 ${panelWidth} ${totalHeight}">
+<rect x="0" y="0" width="${panelWidth}" height="${totalHeight}" fill="#ffffff"/>
+<rect x="0" y="0" width="${labelColWidth}" height="${totalHeight}" fill="#faf9f6"/>
+${imagesXml}${labelsXml}</svg>`;
+
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `figure_S1_${DATA.gene}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('swapBtn').addEventListener('click', () => {
+  swapped = !swapped;
+  render();
+});
+document.getElementById('downloadSvgBtn').addEventListener('click', downloadSvg);
+
+render();
+window.addEventListener('resize', () => {
+  clearTimeout(window.__rsz);
+  window.__rsz = setTimeout(render, 150);
+});
+</script>
+</body>
+</html>
