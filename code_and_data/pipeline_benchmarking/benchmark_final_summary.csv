@@ -1,0 +1,23 @@
+metric,value
+Table S1 genomes (total),251
+Automated table genomes (total),80789
+Common assemblies compared,238
+S1 genomes discarded (absent from automated table / version mismatch),13
+S1 gene columns (after FliN/FliY merge),82
+S1 gene columns matched to an automated column,80
+S1 gene columns discarded (no automated match),2
+"S1 gene columns discarded, names","flk,Glucosaminidase"
+"[Forward, S1 as reference] ID-level FN, raw",1217
+"[Forward] ID-level FN, NCBI-confirmed stale (discarded)",330
+"[Forward] ID-level FN, corrected (genuine)",887
+[Forward] genome/gene pairs discarded (GTDB->NCBI translation failure),943
+"[Forward] median TPR_id_level, raw",0.962
+"[Forward] median TPR_id_level, stale-corrected",0.9867
+[Forward] median TPR_genome_level,0.9958
+"[Reversed, automated as reference] ID-level FN, raw",1051
+"[Reversed] ID-level FN, NCBI-confirmed stale (discarded)",26
+"[Reversed] ID-level FN, corrected (genuine)",1025
+[Reversed] genome/gene pairs discarded (GTDB->NCBI translation failure),943
+"[Reversed] median TPR_id_level, raw",0.9478
+"[Reversed] median TPR_id_level, stale-corrected",0.949
+[Reversed] median TPR_genome_level,0.9957

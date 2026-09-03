@@ -1,0 +1,517 @@
+<title>Ancestral Gene Heatmap</title>
+<style>
+* { box-sizing: border-box; }
+:root { --low: #bd6b3a; --high: #0f9077; --gray: #f0efec; }
+body { background: #ffffff; margin: 0; font-family: Arial, Helvetica, sans-serif; }
+.wrap { padding: 20px; display: inline-block; }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.switcher {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.swatch-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 999px;
+  border: 2px solid #e1e0d9;
+  background: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+}
+.swatch-btn.active { border-color: #000000; }
+.swatch-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+
+.export-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 2px solid #000000;
+  background: #000000;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+.export-btn:disabled { opacity: 0.5; cursor: default; }
+.export-status {
+  font-size: 12px;
+  color: #52514e;
+}
+
+.outer {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+.left-grid {
+  display: grid;
+  grid-template-columns: 150px 330px;
+  grid-template-rows: 40px 40px 40px auto;
+  gap: 2px;
+}
+.right-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 40px);
+  grid-template-rows: 40px 40px 40px auto;
+  gap: 2px;
+}
+.absent-grid {
+  display: grid;
+  grid-template-columns: 220px;
+  grid-template-rows: 40px 40px 40px auto;
+  gap: 2px;
+}
+.merged-absent {
+  grid-row: 1 / span 3;
+  grid-column: 1;
+  border-radius: 8px;
+  background: var(--low);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: default;
+  padding: 8px;
+}
+.merged-absent .count { font-size: 30px; font-weight: 700; line-height: 1.4; }
+.merged-absent .prob { font-size: 20px; font-weight: 700; line-height: 1.4; }
+.absent-list {
+  grid-row: 4;
+  grid-column: 1;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-left: 10px;
+}
+.legend-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+.legend-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.legend-bar {
+  width: 16px;
+  height: 124px;
+  border-radius: 4px;
+  background: linear-gradient(to top, var(--low), var(--gray), var(--high));
+}
+.legend-ticks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 124px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.rowlabel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 15px;
+  font-weight: 700;
+  color: #000000;
+  padding-right: 10px;
+  white-space: nowrap;
+}
+
+.cell {
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.merged {
+  grid-row: 1 / span 3;
+  grid-column: 2;
+  border-radius: 8px;
+  background: var(--high);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: default;
+  padding: 8px;
+}
+.merged .count { font-size: 30px; font-weight: 700; line-height: 1.4; }
+.merged .prob { font-size: 20px; font-weight: 700; line-height: 1.4; }
+
+.genelabels {
+  grid-column: 1 / span 8;
+  grid-row: 4;
+  display: grid;
+  grid-template-columns: repeat(8, 40px);
+  justify-items: center;
+  align-items: start;
+  gap: 2px;
+  padding-top: 10px;
+}
+.genelabel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 15px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.unanimous-list, .absent-list {
+  text-align: justify;
+  text-align-last: center;
+  text-justify: inter-word;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #000000;
+  padding-top: 10px;
+}
+.unanimous-list {
+  grid-column: 2;
+  grid-row: 4;
+}
+.gword { display: inline; }
+
+#tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: #0b0b0b;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  line-height: 1.4;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.08s ease;
+  max-width: 260px;
+}
+</style>
+
+<div class="wrap" id="wrap">
+  <div class="toolbar">
+    <div class="switcher" id="switcher"></div>
+    <button class="export-btn" id="exportBtn">Export SVG</button>
+    <span class="export-status" id="exportStatus"></span>
+  </div>
+  <div class="outer" id="outer">
+    <div class="left-grid" id="leftGrid"></div>
+    <div class="right-grid" id="rightGrid"></div>
+    <div class="absent-grid" id="absentGrid"></div>
+    <div class="legend" id="legend">
+      <div class="legend-title">P(LBCA)</div>
+      <div class="legend-body">
+        <div class="legend-bar" id="legendBar"></div>
+        <div class="legend-ticks"><span>1.0</span><span>0.5</span><span>0.0</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="tooltip"></div>
+
+<script>
+const split = {"unanimous": ["CsrA", "FapA", "FlaG", "FlgA", "FlgB", "FlgC", "FlgD", "FlgE", "FlgF", "FlgG", "FlgH", "FlgI", "FlgJ", "FlgK", "FlgL", "FlgM", "FlgN", "FlgP", "FlhA", "FlhB", "FlhF", "FlhG", "FliA", "FliC", "FliD", "FliE", "FliF", "FliG", "FliH", "FliI", "FliJ", "FliK", "FliL", "FliM", "FliN", "FliO", "FliP", "FliQ", "FliR", "FliS", "FliW", "MotA", "MotB", "MotE", "PilZ", "Putative", "SwrB", "SwrD", "Transglycosylase"], "rest": [{"gene": "FliT", "genome": 0.3913532716499153, "order": 0.9999950548528612, "family": 0.9999845189135662, "consistent": false}, {"gene": "FlrA", "genome": 0.6653444631353125, "order": 0.471982942464707, "family": 0.3821785840262657, "consistent": false}, {"gene": "DUF327", "genome": 0.9998349669322728, "order": 0.0125128570085618, "family": 0.2729499402399744, "consistent": false}, {"gene": "FlgO", "genome": 0.9992030905772458, "order": 0.1171013711518615, "family": 0.0158540913562671, "consistent": false}, {"gene": "FlrC", "genome": 0.1870687945070069, "order": 0.413689586475543, "family": 0.394751337882605, "consistent": true}, {"gene": "YvyF", "genome": 0.0638391216762673, "order": 0.0003878907533511, "family": 0.8649897099436511, "consistent": false}, {"gene": "FlcD", "genome": 0.5457976359638824, "order": 1.9957250691403605e-08, "family": 4.8630257573756585e-08, "consistent": false}, {"gene": "FlcC", "genome": 0.5275504407016537, "order": 2.478905739562951e-08, "family": 6.287079922516324e-08, "consistent": false}], "absent": ["DUF1217", "FlaF", "FlaY", "FlbT", "FlcA", "FlcB", "FlgQ", "FlgT", "FlgX", "FlhC", "FlhD", "FlhE", "FliB", "FliZ", "FljA", "MotC", "MotK", "MotX", "MotY", "PflA", "PflB", "SwrA", "YdiV", "YviE"]};
+
+const methodKeys = ['genome', 'family', 'order'];
+const methodLabel = ['GTDB r214', 'Family-level', 'Order-level'];
+
+const PALETTES = [
+  { name: 'Teal / Clay',        low: '#bd6b3a', high: '#0f9077' },
+  { name: 'Teal / Clay (light)', low: '#d5a57f', high: '#74bdad' },
+  { name: 'Plum / Gold',        low: '#cfae71', high: '#a690c5' },
+  { name: 'Green / Rose',       low: '#d591b1', high: '#89b47e' },
+  { name: 'Clay / Green (light)', low: '#d5a57f', high: '#89b47e' }
+];
+let current = PALETTES[0];
+const GRAY = '#f0efec';
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbToHex([r, g, b]) {
+  return '#' + [r, g, b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2, '0')).join('');
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpColor(hexA, hexB, t) {
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  return rgbToHex([lerp(a[0],b[0],t), lerp(a[1],b[1],t), lerp(a[2],b[2],t)]);
+}
+function relLuminance([r,g,b]) {
+  const f = v => { v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+  const [R,G,B] = [f(r), f(g), f(b)];
+  return 0.2126*R + 0.7152*G + 0.0722*B;
+}
+function colorFor(p) {
+  if (p <= 0.5) return lerpColor(current.low, GRAY, p / 0.5);
+  return lerpColor(GRAY, current.high, (p - 0.5) / 0.5);
+}
+
+const leftGrid = document.getElementById('leftGrid');
+const rightGrid = document.getElementById('rightGrid');
+const absentGrid = document.getElementById('absentGrid');
+const tooltip = document.getElementById('tooltip');
+const switcher = document.getElementById('switcher');
+
+function place(container, el, col, row) {
+  el.style.gridColumn = col;
+  el.style.gridRow = row;
+  container.appendChild(el);
+}
+
+function buildWordSpans(container, words) {
+  words.forEach((w, i) => {
+    const span = document.createElement('span');
+    span.className = 'gword';
+    span.textContent = w;
+    container.appendChild(span);
+    if (i < words.length - 1) container.appendChild(document.createTextNode(' '));
+  });
+}
+
+function render() {
+  leftGrid.innerHTML = '';
+  rightGrid.innerHTML = '';
+  absentGrid.innerHTML = '';
+
+  document.documentElement.style.setProperty('--low', current.low);
+  document.documentElement.style.setProperty('--high', current.high);
+
+  methodLabel.forEach((label, i) => {
+    const el = document.createElement('div');
+    el.className = 'rowlabel';
+    el.textContent = label;
+    place(leftGrid, el, '1', String(i + 1));
+  });
+
+  const merged = document.createElement('div');
+  merged.className = 'merged';
+  merged.innerHTML = `<div class="count">${split.unanimous.length} genes</div><div class="prob">P(LBCA) &gt; 0.95</div>`;
+  merged.dataset.fill = current.high;
+  merged.addEventListener('mousemove', (e) => {
+    tooltip.style.opacity = '1';
+    tooltip.innerHTML = `<strong>${split.unanimous.length} genes</strong><br>Called ancestral (P &gt; 0.95) by GTDB r214, family-level, and order-level trees alike`;
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY + 14) + 'px';
+  });
+  merged.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+  place(leftGrid, merged, '2', '1 / span 3');
+
+  const list = document.createElement('div');
+  list.className = 'unanimous-list';
+  buildWordSpans(list, split.unanimous);
+  place(leftGrid, list, '2', '4');
+
+  split.rest.forEach((d, gi) => {
+    methodKeys.forEach((key, ri) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const bg = colorFor(d[key]);
+      cell.style.background = bg;
+      const lum = relLuminance(hexToRgb(bg));
+      const fg = lum > 0.5 ? '#0b0b0b' : '#ffffff';
+      cell.style.color = fg;
+      cell.dataset.bg = bg;
+      cell.dataset.fg = fg;
+      const v = d[key];
+      cell.textContent = v < 0.005 ? '0.00' : v > 0.995 ? '1.00' : v.toFixed(2);
+      cell.addEventListener('mousemove', (e) => {
+        tooltip.style.opacity = '1';
+        tooltip.innerHTML = `<strong>${d.gene}</strong><br>${methodLabel[ri]}<br>P(present) = ${d[key].toExponential(2)}`;
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top = (e.clientY + 14) + 'px';
+      });
+      cell.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+      place(rightGrid, cell, String(gi + 1), String(ri + 1));
+    });
+  });
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'genelabels';
+  split.rest.forEach(d => {
+    const lbl = document.createElement('div');
+    lbl.className = 'genelabel';
+    lbl.textContent = d.gene;
+    labelRow.appendChild(lbl);
+  });
+  place(rightGrid, labelRow, '1 / span 8', '4');
+
+  const absentBlock = document.createElement('div');
+  absentBlock.className = 'merged-absent';
+  absentBlock.innerHTML = `<div class="count">${split.absent.length} genes</div><div class="prob">P(LBCA) &lt; 0.05</div>`;
+  absentBlock.dataset.fill = current.low;
+  absentBlock.addEventListener('mousemove', (e) => {
+    tooltip.style.opacity = '1';
+    tooltip.innerHTML = `<strong>${split.absent.length} genes</strong><br>Called not ancestral (P &lt; 0.05) by GTDB r214, family-level, and order-level trees alike`;
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY + 14) + 'px';
+  });
+  absentBlock.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+  place(absentGrid, absentBlock, '1', '1 / span 3');
+
+  const absentList = document.createElement('div');
+  absentList.className = 'absent-list';
+  buildWordSpans(absentList, split.absent);
+  place(absentGrid, absentList, '1', '4');
+}
+
+function renderSwitcher() {
+  switcher.innerHTML = '';
+  PALETTES.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'swatch-btn' + (p === current ? ' active' : '');
+    btn.innerHTML = `<span class="swatch-dot" style="background:${p.low}"></span><span class="swatch-dot" style="background:${p.high}"></span>${p.name}`;
+    btn.addEventListener('click', () => {
+      current = p;
+      renderSwitcher();
+      render();
+    });
+    switcher.appendChild(btn);
+  });
+}
+
+renderSwitcher();
+render();
+
+/* ---------------- SVG export ---------------- */
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function buildSVG() {
+  const wrapEl = document.getElementById('wrap');
+  const outerEl = document.getElementById('outer');
+  const origin = outerEl.getBoundingClientRect();
+  const parts = [];
+  const defs = [];
+
+  function rel(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left - origin.left, y: r.top - origin.top, w: r.width, h: r.height };
+  }
+
+  function rect(el, fill, radius) {
+    const r = rel(el);
+    parts.push(`<rect x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" width="${r.w.toFixed(1)}" height="${r.h.toFixed(1)}" rx="${radius}" fill="${fill}"/>`);
+    return r;
+  }
+
+  function text(x, y, str, opts) {
+    const o = Object.assign({ size: 14, weight: 700, fill: '#000000', anchor: 'start' }, opts || {});
+    parts.push(`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="${o.size}" font-weight="${o.weight}" fill="${o.fill}" text-anchor="${o.anchor}">${esc(str)}</text>`);
+  }
+
+  // row labels
+  document.querySelectorAll('.rowlabel').forEach(el => {
+    const r = rel(el);
+    text(r.x + r.w - 10, r.y + r.h / 2 + 5, el.textContent, { size: 15, anchor: 'end' });
+  });
+
+  // merged (present) + merged-absent blocks
+  ['.merged', '.merged-absent'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const r = rect(el, el.dataset.fill, 8);
+    const countEl = el.querySelector('.count');
+    const probEl = el.querySelector('.prob');
+    const cx = r.x + r.w / 2;
+    text(cx, r.y + r.h / 2 - 6, countEl.textContent, { size: 30, fill: '#ffffff', anchor: 'middle' });
+    text(cx, r.y + r.h / 2 + 22, probEl.textContent, { size: 20, fill: '#ffffff', anchor: 'middle' });
+  });
+
+  // detail cells
+  document.querySelectorAll('.cell').forEach(el => {
+    const r = rect(el, el.dataset.bg, 4);
+    text(r.x + r.w / 2, r.y + r.h / 2 + 5, el.textContent, { size: 13.5, fill: el.dataset.fg, anchor: 'middle' });
+  });
+
+  // rotated gene labels
+  document.querySelectorAll('.genelabel').forEach(el => {
+    const r = rel(el);
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    parts.push(`<text x="0" y="0" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#000000" text-anchor="middle" transform="translate(${cx.toFixed(1)},${cy.toFixed(1)}) rotate(-90)">${esc(el.textContent)}</text>`);
+  });
+
+  // justified word lists (per-word actual rendered positions)
+  document.querySelectorAll('.unanimous-list .gword, .absent-list .gword').forEach(el => {
+    const r = rel(el);
+    text(r.x, r.y + r.h * 0.78, el.textContent, { size: 15, fill: '#000000', anchor: 'start' });
+  });
+
+  // legend
+  const legendTitle = document.querySelector('.legend-title');
+  if (legendTitle) {
+    const r = rel(legendTitle);
+    text(r.x, r.y + r.h * 0.8, legendTitle.textContent, { size: 13, anchor: 'start' });
+  }
+  const bar = document.getElementById('legendBar');
+  if (bar) {
+    const r = rel(bar);
+    const gid = 'legendGrad';
+    defs.push(`<linearGradient id="${gid}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${current.low}"/><stop offset="0.5" stop-color="${GRAY}"/><stop offset="1" stop-color="${current.high}"/></linearGradient>`);
+    parts.push(`<rect x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" width="${r.w.toFixed(1)}" height="${r.h.toFixed(1)}" rx="4" fill="url(#${gid})"/>`);
+  }
+  document.querySelectorAll('.legend-ticks span').forEach(el => {
+    const r = rel(el);
+    text(r.x, r.y + r.h * 0.85, el.textContent, { size: 13, anchor: 'start' });
+  });
+
+  const totalW = outerEl.scrollWidth;
+  const totalH = outerEl.scrollHeight;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">` +
+    `<defs>${defs.join('')}</defs>` +
+    `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff"/>` +
+    parts.join('') +
+    `</svg>`;
+}
+
+const exportBtn = document.getElementById('exportBtn');
+const exportStatus = document.getElementById('exportStatus');
+
+exportBtn.addEventListener('click', async () => {
+  exportStatus.textContent = '';
+  const svg = buildSVG();
+  const downloads = await window.claude.use('downloads');
+  if (!downloads) {
+    exportStatus.textContent = 'Downloads are not available in this view.';
+    return;
+  }
+  try {
+    await downloads.save({ filename: 'figure3b_ancestral_heatmap.svg', data: svg });
+    exportStatus.textContent = 'Saved.';
+  } catch (err) {
+    exportStatus.textContent = 'Could not save (' + (err && err.code ? err.code : 'error') + '). Ask Claude for the raw SVG text instead.';
+  }
+});
+</script>

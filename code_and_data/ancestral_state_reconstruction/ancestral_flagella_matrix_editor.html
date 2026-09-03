@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ancestral Flagellar Gene Presence Matrix</title>
+<style>
+  :root {
+    --blue: #7caec4;
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+  }
+  * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    margin: 0;
+    padding: 16px 20px 60px;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+  p.sub {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 900px;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: #f4f5f7;
+    border: 1px solid #e2e3e6;
+    border-radius: 8px;
+  }
+  .toolbar button {
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #c7c9cd;
+    background: white;
+    cursor: pointer;
+  }
+  .toolbar button:hover {
+    background: #eef1f6;
+  }
+  .toolbar button.primary {
+    background: var(--blue);
+    color: white;
+    border-color: var(--blue);
+  }
+  .toolbar button.primary:hover { filter: brightness(1.08); }
+  .toolbar .status {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend .sw {
+    display: inline-block;
+    width: 13px; height: 13px;
+    border-radius: 3px;
+    vertical-align: -2px;
+    margin-right: 4px;
+  }
+  .gridwrap {
+    overflow: auto;
+    max-width: 100%;
+    padding: 10px 10px 14px;
+  }
+  #matrix {
+    display: grid;
+    grid-auto-flow: row;
+  }
+  .cellbase {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .rowlabel {
+    position: sticky;
+    left: 0;
+    background: var(--bg);
+    z-index: 3;
+    font-style: italic;
+    font-size: 13px;
+    justify-content: flex-end;
+    padding-left: 4px;
+    padding-right: 6px;
+  }
+  .ratio {
+    justify-content: flex-start;
+    padding-left: 8px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: normal;
+  }
+  .phylumswatch {
+    position: sticky;
+    background: var(--bg);
+    z-index: 3;
+    justify-content: center;
+    align-items: stretch;
+    padding: 2px 0;
+  }
+  .phylumswatch .sw {
+    width: 12px;
+    height: 100%;
+  }
+  .figlegend {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 14px 10px 4px;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .figlegend .legendline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .figlegend .item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .figlegend .sw {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+  .genehdr {
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 2px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 2;
+  }
+  .genehdr span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    font-size: 15px;
+  }
+  .totalhdr {
+    justify-content: flex-start;
+    padding-left: 8px;
+  }
+  .totalhdr span {
+    font-weight: bold;
+  }
+  .sectionlabel {
+    position: sticky;
+    left: 0;
+    background: var(--bg);
+    z-index: 4;
+    font-weight: bold;
+    font-size: 26px;
+  }
+  .sectionlabel span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+  }
+  .cell {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell .box {
+    width: 16px;
+    height: 16px;
+    border-radius: 0;
+  }
+  .cell.empty .box {
+    border: 1px dashed transparent;
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+
+<h1>Ancestral Flagellar Gene Presence Matrix</h1>
+<p class="sub">
+  Columns are the 50 flagellar genes inferred present at the LBCA-equivalent root (ancestral state
+  reconstruction, family-level hybrid tree). Rows are example GTDB genomes on each side of the deepest
+  split in <code>hybrid_family_backbone_gtdb_grafted.tree</code> (the flagella-gene family-level backbone
+  with real GTDB genome subtrees grafted onto each family leaf) &mdash; assigned to the Terrabacteria or
+  Gracilicutes side by which of the tree root's two children a genome's family falls under. Presence/absence
+  per gene is read from <code>flagellar_genes_phyletic_distribution.tsv</code>
+  (count &gt; 0 = present). The number at the end of each row is the total ancestral genes present out of
+  50. 10 example genomes are shown per side, selected by ranking all candidate genomes on that side by
+  ancestral-gene count (ties broken by total flagellar-gene count across the full ~81-gene family, not just
+  the 50 ancestral ones), then taking genomes top-down while capping at 2 genomes per phylum so no single
+  phylum dominates the row. See <code>build_ancestral_example_genomes.py</code> in this directory to
+  regenerate this selection. Use the Download SVG button below to export a high-fidelity vector copy of
+  this figure (native SVG shapes and text, not a raster image, so it opens cleanly in Adobe Illustrator).
+</p>
+
+<div class="toolbar">
+  <button id="downloadSvgBtn" class="primary">Download SVG</button>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--blue)"></span>present</span>
+    <span><span class="sw" style="background:transparent;border:1px dashed #aaa"></span>absent</span>
+  </div>
+  <span class="status" id="statusMsg"></span>
+</div>
+
+<div class="gridwrap">
+  <div id="matrix"></div>
+</div>
+
+<div class="figlegend" id="phylaLegend"></div>
+
+<script>
+const BLUE = "#7caec4";
+
+// The 50 genes the manuscript identifies as ancestral (present at the
+// LBCA-equivalent root), flat (no functional sub-grouping). Example genomes
+// are selected by build_ancestral_example_genomes.py (see that script for
+// the exact selection criteria and provenance of each data source) and
+// written to outputs/ancestral_example_genomes.tsv; their presence/
+// absence across these 50 genes below is copied from that same run. This is
+// a read-only figure (no in-page editing) -- use Download SVG to get an
+// editable vector copy instead.
+const genes = ["FlhA", "FlhB", "FliO", "FliP", "FliQ", "FliR", "FliH", "FliI", "FliJ", "FliF", "FliE", "FlgB", "FlgC", "FlgF", "FlgG", "FlgE", "FlgD", "FlgH", "FlgI", "FlgA", "FlgJ", "FlgP", "FliG", "FliL", "FliM", "FliN", "MotA", "MotB", "MotE", "SwrD", "FliC", "FliD", "FlgK", "FlgL", "FlgN", "FlhF", "FlhG", "FliK", "FliS", "FliT", "FapA", "SwrB", "FliA", "FlgM", "FliW", "FlaG", "PilZ", "CsrA", "Transglycosylase", "Putative"];
+
+const sections = [{"title": "Terrabacteria", "rows": [{"name": "Sporomusa sp007830295", "ratio": "50", "phylum": "Bacillota_C"}, {"name": "Sporomusa termitida", "ratio": "50", "phylum": "Bacillota_C"}, {"name": "Orenia marismortui", "ratio": "49", "phylum": "Bacillota_F"}, {"name": "Fuchsiella alkaliacetigena", "ratio": "49", "phylum": "Bacillota_F"}, {"name": "Aminivibrio sp009929115", "ratio": "48", "phylum": "Synergistota"}, {"name": "Aminiphilus circumscriptus", "ratio": "48", "phylum": "Synergistota"}, {"name": "Marinitoga sp011057715", "ratio": "48", "phylum": "Thermotogota"}, {"name": "Marinitoga hydrogenitolerans", "ratio": "48", "phylum": "Thermotogota"}, {"name": "JAAYHS01 sp012735315", "ratio": "48", "phylum": "Bacillota_G"}, {"name": "JAAYHS01 sp023394955", "ratio": "48", "phylum": "Bacillota_G"}]}, {"title": "Gracilicutes", "rows": [{"name": "JAEZKC01 sp023436205", "ratio": "49", "phylum": "Fibrobacterota"}, {"name": "WJLW01 sp014728295", "ratio": "48", "phylum": "Fibrobacterota"}, {"name": "SICG01 sp016187725", "ratio": "49", "phylum": "Latescibacterota"}, {"name": "Geomesophilobacter sediminis", "ratio": "49", "phylum": "Desulfobacterota_F"}, {"name": "Geomonas pelophila", "ratio": "49", "phylum": "Desulfobacterota_F"}, {"name": "HGW-15 sp020060215", "ratio": "48", "phylum": "Desulfobacterota"}, {"name": "MADRE1 sp004796465", "ratio": "48", "phylum": "Desulfobacterota"}, {"name": "JACRIR01 sp016215705", "ratio": "48", "phylum": "Abyssobacteria"}, {"name": "Deferribacter autotrophicus", "ratio": "48", "phylum": "Deferribacterota"}, {"name": "Deferribacter desulfuricans", "ratio": "48", "phylum": "Deferribacterota"}]}];
+
+const DEFAULT_GRID = [["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4"], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null], ["#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null, "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", "#7caec4", null]];
+
+const GENE_COL_W = 18;   // px per gene column
+const SECTION_COL_W = 34; // px vertical section-label column
+const PHYLUM_COL_W = 22; // px phylum-swatch column, next to the species name
+const RATIO_COL_W = 40;  // px ratio column
+const DATA_ROW_H = 20;
+const SPACER_ROW_H = 16; // px blank gap between sections
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+// Measures a string's rendered width via a hidden SVG <text> node's
+// getBBox() -- used both to size the species-name column tightly around
+// the actual longest name (rather than a guessed constant) and later to
+// lay out the SVG export.
+function measureTextWidth(text, fontSize, fontWeight, fontStyle) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  svg.style.position = 'absolute';
+  svg.style.visibility = 'hidden';
+  const t = document.createElementNS(SVG_NS, 'text');
+  t.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+  t.setAttribute('font-size', String(fontSize));
+  if (fontWeight) t.setAttribute('font-weight', fontWeight);
+  if (fontStyle) t.setAttribute('font-style', fontStyle);
+  t.textContent = text;
+  svg.appendChild(t);
+  document.body.appendChild(svg);
+  const width = t.getBBox().width;
+  document.body.removeChild(svg);
+  return width;
+}
+
+// Species-name column width: tight around the longest actual name (13px
+// italic, matching .rowlabel) plus the same left/right padding .rowlabel
+// uses, instead of a guessed fixed width -- so right-aligned shorter names
+// don't leave a large gap after the section label.
+const LABEL_PAD_LEFT = 4, LABEL_PAD_RIGHT = 6;
+const LABEL_COL_W = Math.ceil(Math.max(
+  ...sections.flatMap(sec => sec.rows.map(row => measureTextWidth(row.name, 13, 'normal', 'italic')))
+)) + LABEL_PAD_LEFT + LABEL_PAD_RIGHT;
+
+// Phylum color key: each side gets its own diverging hue -- plum for
+// Terrabacteria, gold for Gracilicutes -- stepped from most intense (first
+// distinct phylum encountered, top of that section) to least intense (last
+// distinct phylum, bottom of that section). Genomes sharing a phylum share
+// a shade; the legend below the figure renders one line per side, in the
+// same intense-to-light order left to right.
+const SIDE_HUE = {
+  Terrabacteria: { hue: 300, sat: 45 }, // plum
+  Gracilicutes: { hue: 45, sat: 60 },   // gold
+};
+const L_INTENSE = 40, L_LIGHT = 85; // percent lightness
+
+function assignPhylumColors(sections) {
+  const bySide = {};
+  const colorFor = {};
+  sections.forEach(sec => {
+    const order = [];
+    sec.rows.forEach(row => { if (!order.includes(row.phylum)) order.push(row.phylum); });
+    const { hue, sat } = SIDE_HUE[sec.title] || { hue: 0, sat: 0 };
+    const sideColorFor = {};
+    order.forEach((phylum, i) => {
+      const l = order.length > 1 ? L_INTENSE + (L_LIGHT - L_INTENSE) * (i / (order.length - 1)) : (L_INTENSE + L_LIGHT) / 2;
+      sideColorFor[phylum] = `hsl(${hue}, ${sat}%, ${l.toFixed(1)}%)`;
+    });
+    bySide[sec.title] = { order, colorFor: sideColorFor };
+    Object.assign(colorFor, sideColorFor);
+  });
+  return { bySide, colorFor };
+}
+const { bySide: PHYLUM_BY_SIDE, colorFor: PHYLUM_COLOR } = assignPhylumColors(sections);
+
+function renderPhylaLegend() {
+  const el = document.getElementById('phylaLegend');
+  el.innerHTML = '';
+  el.style.marginLeft = '0px';
+  el.style.width = 'auto';
+  sections.forEach(sec => {
+    const { order, colorFor } = PHYLUM_BY_SIDE[sec.title];
+    const line = document.createElement('div');
+    line.className = 'legendline';
+    order.forEach(phylum => {
+      const item = document.createElement('span');
+      item.className = 'item';
+      const sw = document.createElement('span');
+      sw.className = 'sw';
+      sw.style.background = colorFor[phylum];
+      const label = document.createElement('span');
+      label.textContent = phylum;
+      item.appendChild(sw);
+      item.appendChild(label);
+      line.appendChild(item);
+    });
+    el.appendChild(line);
+  });
+
+  // Center on the gene-presence (blue rectangle) columns specifically, not
+  // the page -- measured from the actually-rendered first/last gene header
+  // cells so it stays correct regardless of column widths or padding.
+  const geneHeaders = matrixEl.querySelectorAll('.genehdr:not(.totalhdr)');
+  if (geneHeaders.length) {
+    const naturalLeft = el.getBoundingClientRect().left;
+    const firstRect = geneHeaders[0].getBoundingClientRect();
+    const lastRect = geneHeaders[geneHeaders.length - 1].getBoundingClientRect();
+    el.style.marginLeft = `${firstRect.left - naturalLeft}px`;
+    el.style.width = `${lastRect.right - firstRect.left}px`;
+  }
+}
+
+const matrixEl = document.getElementById('matrix');
+const statusEl = document.getElementById('statusMsg');
+
+let totalGenes, totalDataRows;
+
+function setStatus(msg) {
+  statusEl.textContent = msg;
+  if (msg) setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ""; }, 3500);
+}
+
+function buildGrid() {
+  matrixEl.innerHTML = "";
+  totalGenes = genes.length;
+
+  // count rows: N species per section, plus one blank spacer row between
+  // (not after) consecutive sections
+  let rowCount = 0;
+  sections.forEach((sec, si) => {
+    rowCount += sec.rows.length;
+    if (si < sections.length - 1) rowCount += 1;
+  });
+  totalDataRows = sections.reduce((s,sec) => s + sec.rows.length, 0);
+
+  matrixEl.style.gridTemplateColumns = `${SECTION_COL_W}px ${LABEL_COL_W}px ${PHYLUM_COL_W}px repeat(${totalGenes}, ${GENE_COL_W}px) ${RATIO_COL_W}px`;
+  const rowHeights = [`auto`];
+  sections.forEach((sec, si) => {
+    for (let i=0;i<sec.rows.length;i++) rowHeights.push(`${DATA_ROW_H}px`);
+    if (si < sections.length - 1) rowHeights.push(`${SPACER_ROW_H}px`);
+  });
+  matrixEl.style.gridTemplateRows = rowHeights.join(" ");
+
+  function place(el, col1, row1, colSpan=1, rowSpan=1) {
+    el.style.gridColumn = colSpan>1 ? `${col1} / span ${colSpan}` : `${col1}`;
+    el.style.gridRow = rowSpan>1 ? `${row1} / span ${rowSpan}` : `${row1}`;
+    matrixEl.appendChild(el);
+  }
+
+  // gene header row (row 1)
+  let colCursor = 4; // col1 = section label, col2 = row label, col3 = phylum swatch
+  genes.forEach((gene, gi) => {
+    const el = document.createElement('div');
+    el.className = 'cellbase genehdr' + (gi === 0 ? ' edge-left' : '') + (gi === totalGenes - 1 ? ' edge-right' : '');
+    const span = document.createElement('span');
+    span.textContent = gene;
+    el.appendChild(span);
+    place(el, colCursor, 1, 1, 1);
+    colCursor++;
+  });
+
+  const totalHdrEl = document.createElement('div');
+  totalHdrEl.className = 'cellbase genehdr totalhdr';
+  const totalSpan = document.createElement('span');
+  totalSpan.textContent = 'Unique Genes';
+  totalHdrEl.appendChild(totalSpan);
+  place(totalHdrEl, colCursor, 1, 1, 1);
+
+  // data rows
+  let rowCursor = 2;
+  let globalRowIndex = 0;
+  sections.forEach((sec, si) => {
+    const sectionStartRow = rowCursor;
+
+    sec.rows.forEach((row) => {
+      const nameEl = document.createElement('div');
+      nameEl.className = 'cellbase rowlabel';
+      nameEl.style.left = `${SECTION_COL_W}px`;
+      nameEl.textContent = row.name;
+      place(nameEl, 2, rowCursor, 1, 1);
+
+      for (let c=0;c<totalGenes;c++) {
+        const cellEl = document.createElement('div');
+        cellEl.className = 'cellbase cell' + (c === 0 ? ' edge-left' : '') + (c === totalGenes - 1 ? ' edge-right' : '');
+        const box = document.createElement('div');
+        box.className = 'box';
+        const color = DEFAULT_GRID[globalRowIndex][c];
+        if (color) {
+          box.style.background = color;
+        } else {
+          cellEl.classList.add('empty');
+        }
+        cellEl.appendChild(box);
+        place(cellEl, 4 + c, rowCursor, 1, 1);
+      }
+
+      const ratioEl = document.createElement('div');
+      ratioEl.className = 'cellbase ratio';
+      ratioEl.textContent = row.ratio;
+      place(ratioEl, 4 + totalGenes, rowCursor, 1, 1);
+
+      rowCursor++;
+      globalRowIndex++;
+    });
+
+    // one swatch per contiguous run of same-phylum rows (rows are grouped
+    // by phylum already), spanning the full height of that run instead of
+    // one small square per row.
+    let ri = 0;
+    while (ri < sec.rows.length) {
+      let rj = ri;
+      while (rj < sec.rows.length && sec.rows[rj].phylum === sec.rows[ri].phylum) rj++;
+      const runLen = rj - ri;
+      const swatchEl = document.createElement('div');
+      swatchEl.className = 'cellbase phylumswatch';
+      swatchEl.style.left = `${SECTION_COL_W + LABEL_COL_W}px`;
+      swatchEl.title = sec.rows[ri].phylum;
+      const swatchBox = document.createElement('div');
+      swatchBox.className = 'sw';
+      swatchBox.style.background = PHYLUM_COLOR[sec.rows[ri].phylum];
+      swatchEl.appendChild(swatchBox);
+      place(swatchEl, 3, sectionStartRow + ri, 1, runLen);
+      ri = rj;
+    }
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'cellbase sectionlabel';
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = sec.title;
+    labelEl.appendChild(labelSpan);
+    place(labelEl, 1, sectionStartRow, 1, sec.rows.length);
+
+    if (si < sections.length - 1) rowCursor++; // skip the blank spacer row
+  });
+}
+
+// ---------------------------------------------------------------------------
+// SVG export -- builds a standalone, self-contained vector SVG (no external
+// stylesheet or CSS variables; every shape/text carries its own literal
+// presentation attributes) so it opens cleanly in Adobe Illustrator. Header
+// row height is computed from the *actual measured* width of the longest
+// rotated label (via a hidden SVG text node's getBBox()) rather than an
+// assumed character-width constant, so the export matches whatever fonts
+// the browser actually renders with.
+// ---------------------------------------------------------------------------
+// (SVG_NS and measureTextWidth are already defined above, next to the
+// LABEL_COL_W computation -- reused here for the export's own layout.)
+
+function escXml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildSVGString() {
+  const FONT = 'Arial, Helvetica, sans-serif';
+  const TEXT_COLOR = '#1a1a1a';
+
+  const geneNameWidths = genes.map(g => measureTextWidth(g, 15, 'normal'));
+  const totalHdrWidth = measureTextWidth('Unique Genes', 15, 'bold');
+  const headerTextMax = Math.max(...geneNameWidths, totalHdrWidth);
+  const HEADER_PAD_TOP = 12;
+  const HEADER_PAD_BOTTOM = 6;
+  const headerRowH = Math.ceil(headerTextMax) + HEADER_PAD_TOP + HEADER_PAD_BOTTOM;
+
+  const LEGEND_H = 26;
+
+  const width = SECTION_COL_W + LABEL_COL_W + PHYLUM_COL_W + totalGenes * GENE_COL_W + RATIO_COL_W;
+  const r = (n) => Math.round(n * 100) / 100;
+
+  const body = [];
+
+  // top legend (present / absent)
+  const legendBaselineY = 16;
+  body.push(`<rect x="${r(SECTION_COL_W)}" y="${r(legendBaselineY-11)}" width="12" height="12" fill="${BLUE}"/>`);
+  body.push(`<text x="${r(SECTION_COL_W+18)}" y="${legendBaselineY}" font-family="${FONT}" font-size="11" fill="${TEXT_COLOR}">present</text>`);
+  const presentLabelW = measureTextWidth('present', 11, 'normal');
+  const absentSquareX = SECTION_COL_W + 18 + presentLabelW + 20;
+  body.push(`<rect x="${r(absentSquareX)}" y="${r(legendBaselineY-11)}" width="12" height="12" fill="none" stroke="#aaaaaa" stroke-dasharray="2,2"/>`);
+  body.push(`<text x="${r(absentSquareX+18)}" y="${legendBaselineY}" font-family="${FONT}" font-size="11" fill="${TEXT_COLOR}">absent</text>`);
+
+  const top = LEGEND_H;
+
+  // gene headers (rotated -90deg == equivalent to the on-screen
+  // writing-mode:vertical-rl + rotate(180deg) combo, reading bottom-to-top)
+  genes.forEach((gene, gi) => {
+    const x = SECTION_COL_W + LABEL_COL_W + PHYLUM_COL_W + gi * GENE_COL_W + GENE_COL_W / 2;
+    const y = top + headerRowH - HEADER_PAD_BOTTOM;
+    body.push(
+      `<text x="${r(x)}" y="${r(y)}" font-family="${FONT}" font-size="15" fill="${TEXT_COLOR}" ` +
+      `text-anchor="start" transform="rotate(-90 ${r(x)} ${r(y)})">${escXml(gene)}</text>`
+    );
+  });
+
+  // "Unique Genes" header -- x matches the ratio numbers' own anchor
+  // (SECTION_COL_W + LABEL_COL_W + PHYLUM_COL_W + totalGenes*GENE_COL_W + 8,
+  // text-anchor "start") so the rotated header lines up with the column of
+  // numbers below it instead of sitting centered over the whole ratio column.
+  {
+    const x = SECTION_COL_W + LABEL_COL_W + PHYLUM_COL_W + totalGenes * GENE_COL_W + 8;
+    const y = top + headerRowH - HEADER_PAD_BOTTOM;
+    body.push(
+      `<text x="${r(x)}" y="${r(y)}" font-family="${FONT}" font-size="15" font-weight="bold" fill="${TEXT_COLOR}" ` +
+      `text-anchor="start" transform="rotate(-90 ${r(x)} ${r(y)})">Unique Genes</text>`
+    );
+  }
+
+  let yCursor = top + headerRowH;
+  let globalRowIndex = 0;
+  sections.forEach((sec, si) => {
+    const sectionStartY = yCursor;
+
+    sec.rows.forEach((row) => {
+      const rowCenterY = yCursor + DATA_ROW_H / 2;
+
+      const nameX = SECTION_COL_W + LABEL_COL_W - 6;
+      body.push(
+        `<text x="${r(nameX)}" y="${r(rowCenterY+4)}" font-family="${FONT}" font-size="13" font-style="italic" ` +
+        `fill="${TEXT_COLOR}" text-anchor="end">${escXml(row.name)}</text>`
+      );
+
+      for (let c=0;c<totalGenes;c++) {
+        const color = DEFAULT_GRID[globalRowIndex][c];
+        if (color) {
+          const cx = SECTION_COL_W + LABEL_COL_W + PHYLUM_COL_W + c * GENE_COL_W + (GENE_COL_W - 16) / 2;
+          const cy = rowCenterY - 8;
+          body.push(`<rect x="${r(cx)}" y="${r(cy)}" width="16" height="16" fill="${color}"/>`);
+        }
+      }
+
+      const ratioX = SECTION_COL_W + LABEL_COL_W + PHYLUM_COL_W + totalGenes * GENE_COL_W + 8;
+      body.push(
+        `<text x="${r(ratioX)}" y="${r(rowCenterY+4)}" font-family="${FONT}" font-size="15" ` +
+        `fill="${TEXT_COLOR}" text-anchor="start">${escXml(row.ratio)}</text>`
+      );
+
+      yCursor += DATA_ROW_H;
+      globalRowIndex++;
+    });
+
+    // one swatch rect per contiguous run of same-phylum rows, spanning the
+    // full height of that run (mirrors the on-screen merged-cell swatch).
+    {
+      const swatchX = SECTION_COL_W + LABEL_COL_W + (PHYLUM_COL_W - 12) / 2;
+      let ri = 0;
+      while (ri < sec.rows.length) {
+        let rj = ri;
+        while (rj < sec.rows.length && sec.rows[rj].phylum === sec.rows[ri].phylum) rj++;
+        const runTop = sectionStartY + ri * DATA_ROW_H;
+        const runH = (rj - ri) * DATA_ROW_H;
+        body.push(`<rect x="${r(swatchX)}" y="${r(runTop)}" width="12" height="${r(runH)}" fill="${PHYLUM_COLOR[sec.rows[ri].phylum]}"/>`);
+        ri = rj;
+      }
+    }
+
+    const labelX = SECTION_COL_W / 2;
+    const labelY = sectionStartY + (sec.rows.length * DATA_ROW_H) / 2;
+    body.push(
+      `<text x="${r(labelX)}" y="${r(labelY)}" font-family="${FONT}" font-size="26" font-weight="bold" ` +
+      `fill="${TEXT_COLOR}" text-anchor="middle" transform="rotate(-90 ${r(labelX)} ${r(labelY)})">${escXml(sec.title)}</text>`
+    );
+
+    if (si < sections.length - 1) yCursor += SPACER_ROW_H;
+  });
+
+  // phyla legend, below the matrix -- one line per side (Terrabacteria then
+  // Gracilicutes), each in its own hue, most-intense-first left to right,
+  // matching the on-screen #phylaLegend: font size matches the gene-name
+  // labels (15px), and each line is centered on the gene-presence (blue
+  // rectangle) columns specifically -- not the whole figure width, which
+  // also includes the section-label, row-label, phylum-swatch and ratio
+  // columns. Wraps within a side's own line if it would otherwise overflow
+  // that width (SVG text doesn't reflow on its own), centering each
+  // wrapped sub-line independently.
+  const PHYLA_SWATCH = 12, PHYLA_GAP_TEXT = 6, PHYLA_ITEM_GAP = 18, PHYLA_ROW_H = 20, PHYLA_FONT = 15;
+  const geneAreaLeft = SECTION_COL_W + LABEL_COL_W + PHYLUM_COL_W;
+  const geneAreaWidth = totalGenes * GENE_COL_W;
+  let legendY = yCursor + 26;
+  sections.forEach(sec => {
+    const { order, colorFor } = PHYLUM_BY_SIDE[sec.title];
+
+    // wrap this side's phyla into sub-lines that fit the gene-area width
+    const lines = [[]];
+    order.forEach(phylum => {
+      const textW = measureTextWidth(phylum, PHYLA_FONT, 'normal');
+      const itemW = PHYLA_SWATCH + PHYLA_GAP_TEXT + textW;
+      const curLine = lines[lines.length - 1];
+      const curLineW = curLine.reduce((s, it) => s + it.itemW, 0) + PHYLA_ITEM_GAP * Math.max(0, curLine.length - 1);
+      if (curLine.length > 0 && curLineW + PHYLA_ITEM_GAP + itemW > geneAreaWidth) lines.push([]);
+      lines[lines.length - 1].push({ phylum, itemW });
+    });
+
+    // render each sub-line centered on the gene-area width
+    lines.forEach(line => {
+      const lineW = line.reduce((s, it) => s + it.itemW, 0) + PHYLA_ITEM_GAP * (line.length - 1);
+      let x = geneAreaLeft + (geneAreaWidth - lineW) / 2;
+      line.forEach(item => {
+        body.push(`<rect x="${r(x)}" y="${r(legendY - 11)}" width="${PHYLA_SWATCH}" height="${PHYLA_SWATCH}" fill="${colorFor[item.phylum]}"/>`);
+        body.push(`<text x="${r(x + PHYLA_SWATCH + PHYLA_GAP_TEXT)}" y="${legendY}" font-family="${FONT}" font-size="${PHYLA_FONT}" fill="${TEXT_COLOR}">${escXml(item.phylum)}</text>`);
+        x += item.itemW + PHYLA_ITEM_GAP;
+      });
+      legendY += PHYLA_ROW_H;
+    });
+  });
+
+  const height = legendY - PHYLA_ROW_H + 12;
+
+  const parts = [];
+  parts.push('<?xml version="1.0" encoding="UTF-8" standalone="no"?>');
+  parts.push(
+    `<svg xmlns="${SVG_NS}" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" ` +
+    `width="${r(width)}" height="${r(height)}" viewBox="0 0 ${r(width)} ${r(height)}">`
+  );
+  parts.push(`<rect x="0" y="0" width="${r(width)}" height="${r(height)}" fill="#ffffff"/>`);
+  parts.push(...body);
+  parts.push('</svg>');
+  return parts.join('\n');
+}
+
+function downloadSVG() {
+  const svgStr = buildSVGString();
+  const blob = new Blob([svgStr], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ancestral_flagella_matrix.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setStatus('Downloaded ancestral_flagella_matrix.svg');
+}
+
+document.getElementById('downloadSvgBtn').addEventListener('click', downloadSVG);
+
+buildGrid();
+renderPhylaLegend();
+</script>
+</body>
+</html>

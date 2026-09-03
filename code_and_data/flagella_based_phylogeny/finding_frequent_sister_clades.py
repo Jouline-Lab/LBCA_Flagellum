@@ -8,17 +8,14 @@ Created on Tue Jun  3 22:25:06 2025
 import os
 import glob
 import json
+from pathlib import Path
 from typing import Dict, List, Tuple, Set, Optional
 from time import perf_counter
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 from ete3 import Tree
-from scipy.spatial.distance import squareform
-from scipy.cluster.hierarchy import linkage, dendrogram
 
 from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
 from Bio import Phylo
@@ -142,20 +139,6 @@ def get_tree_paths(tree_dir: str) -> List[str]:
     return sorted(glob.glob(pattern))
 
 
-def _add_combo_to_matrix(
-    taxa_here: List[int],
-    combo_weight: float,
-    matrix: np.ndarray,
-) -> None:
-    """Add one clade/split contribution directly to the similarity matrix."""
-    for i in range(len(taxa_here) - 1):
-        ii = taxa_here[i]
-        for j in range(i + 1, len(taxa_here)):
-            jj = taxa_here[j]
-            matrix[ii, jj] += combo_weight
-            matrix[jj, ii] += combo_weight
-
-
 def process_tree(
     tree_path: str,
     leaf2taxon: Dict[str, int],
@@ -220,7 +203,7 @@ def process_tree(
     t_traverse = perf_counter()
     n_tax = len(idx_to_taxon)
     M = np.zeros((n_tax, n_tax), dtype=float)
-    combo_best: Optional[Dict[frozenset[int], float]] = {} if weight_agg == "max" else None
+    pair_best: Optional[Dict[Tuple[int, int], float]] = {} if weight_agg == "max" else None
     internal_nodes = 0
     for node in T.traverse("postorder"):
         if node.is_leaf():
@@ -248,17 +231,19 @@ def process_tree(
         if len(taxa_here) <= 1:
             continue
 
-        contrib = sum(
-            wvals[i] * wvals[j]
-            for i in range(len(taxa_here) - 1)
-            for j in range(i + 1, len(taxa_here))
-        )
-        if weight_agg == "max":
-            key = frozenset(taxa_here)
-            if contrib > combo_best.get(key, 0.0):
-                combo_best[key] = contrib
-        else:
-            _add_combo_to_matrix(taxa_here, contrib, M)
+        # Add the pair-specific product for every taxon pair in this clade.
+        for i in range(len(taxa_here) - 1):
+            ii = taxa_here[i]
+            for j in range(i + 1, len(taxa_here)):
+                jj = taxa_here[j]
+                contrib = wvals[i] * wvals[j]
+                if pair_best is not None:
+                    key = (min(ii, jj), max(ii, jj))
+                    if contrib > pair_best.get(key, 0.0):
+                        pair_best[key] = contrib
+                else:
+                    M[ii, jj] += contrib
+                    M[jj, ii] += contrib
     if verbose:
         print(
             f"  [tree] traversed/scored {internal_nodes} internal nodes "
@@ -267,12 +252,13 @@ def process_tree(
 
     # 5. Similarity matrix -------------------------------------------
     t_matrix = perf_counter()
-    if combo_best is not None:
-        for combo, w in combo_best.items():
-            _add_combo_to_matrix(list(combo), w, M)
-    if verbose and combo_best is not None:
+    if pair_best is not None:
+        for (ii, jj), w in pair_best.items():
+            M[ii, jj] += w
+            M[jj, ii] += w
+    if verbose and pair_best is not None:
         print(
-            f"  [tree] expanded {len(combo_best)} cached clade groups into matrix "
+            f"  [tree] expanded {len(pair_best)} cached taxon pairs into matrix "
             f"({perf_counter() - t_matrix:.2f}s)"
         )
 
@@ -367,7 +353,7 @@ def process_tree_unrooted(
     t_splits = perf_counter()
     n_tax = len(idx_to_taxon)
     M = np.zeros((n_tax, n_tax), dtype=float)
-    combo_best: Optional[Dict[frozenset[int], float]] = {} if weight_agg == "max" else None
+    pair_best: Optional[Dict[Tuple[int, int], float]] = {} if weight_agg == "max" else None
     internal_splits = 0
     for node in T.traverse("postorder"):
         # Each non-root internal node defines one internal-edge split.
@@ -397,17 +383,20 @@ def process_tree_unrooted(
             if len(taxa_here) <= 1:
                 continue
 
-            contrib = sum(
-                wvals[i] * wvals[j]
-                for i in range(len(taxa_here) - 1)
-                for j in range(i + 1, len(taxa_here))
-            )
-            if weight_agg == "max":
-                key = frozenset(taxa_here)
-                if contrib > combo_best.get(key, 0.0):
-                    combo_best[key] = contrib
-            else:
-                _add_combo_to_matrix(taxa_here, contrib, M)
+            # Add the pair-specific product for every taxon pair on this side
+            # of the split.
+            for i in range(len(taxa_here) - 1):
+                ii = taxa_here[i]
+                for j in range(i + 1, len(taxa_here)):
+                    jj = taxa_here[j]
+                    contrib = wvals[i] * wvals[j]
+                    if pair_best is not None:
+                        key = (min(ii, jj), max(ii, jj))
+                        if contrib > pair_best.get(key, 0.0):
+                            pair_best[key] = contrib
+                    else:
+                        M[ii, jj] += contrib
+                        M[jj, ii] += contrib
     if verbose:
         print(
             f"  [tree] scored {internal_splits} internal splits "
@@ -415,12 +404,13 @@ def process_tree_unrooted(
         )
 
     t_matrix = perf_counter()
-    if combo_best is not None:
-        for combo, w in combo_best.items():
-            _add_combo_to_matrix(list(combo), w, M)
-    if verbose and combo_best is not None:
+    if pair_best is not None:
+        for (ii, jj), w in pair_best.items():
+            M[ii, jj] += w
+            M[jj, ii] += w
+    if verbose and pair_best is not None:
         print(
-            f"  [tree] expanded {len(combo_best)} cached split groups into matrix "
+            f"  [tree] expanded {len(pair_best)} cached taxon pairs into matrix "
             f"({perf_counter() - t_matrix:.2f}s)"
         )
 
@@ -598,52 +588,6 @@ def build_distance_matrix(
     return df
 
 
-def plot_heatmap(
-    distance_df: pd.DataFrame,
-    figsize: Tuple[int, int] = (12, 12),
-    cmap: str = "viridis",
-    method: str = "average"
-) -> sns.matrix.ClusterGrid:
-    """
-    Clustered heatmap of the distance matrix.
-    """
-    mat = distance_df.values.copy()
-    np.fill_diagonal(mat, 0.0)
-    dist_vec = squareform(mat)
-    Z = linkage(dist_vec, method=method)
-
-    cg = sns.clustermap(
-        distance_df,
-        row_linkage=Z, col_linkage=Z,
-        figsize=figsize, cmap=cmap,
-        xticklabels=True, yticklabels=True
-    )
-    # cg.ax_heatmap.set_title(f"Clustering at rank '{rank}'")
-    return cg
-
-
-def plot_dendrogram(
-    distance_df: pd.DataFrame,
-    figsize: Tuple[int, int] = (10, 8),
-    method: str = "average",
-    output_file: str = "dendrogram.png"
-):
-    """
-    Save a dendrogram PNG from a distance DataFrame.
-    """
-    mat = distance_df.values.copy()
-    np.fill_diagonal(mat, 0.0)
-    dist_vec = squareform(mat)
-    Z = linkage(dist_vec, method=method)
-
-    plt.figure(figsize=figsize)
-    dendrogram(Z, labels=distance_df.index.tolist(), orientation="top", leaf_rotation=90)
-    plt.xlabel("Taxon"); plt.ylabel("Distance")
-    plt.tight_layout()
-    plt.savefig(output_file, dpi=300)
-    plt.close()
-
-
 def build_nj_tree(
     distance_df: pd.DataFrame,
     newick_out: Optional[str] = None,
@@ -667,37 +611,6 @@ def build_nj_tree(
     return bio_tree
 
 
-def get_phyla_with_min_assemblies(
-    rank,
-    json_path: str,
-    min_assemblies: int
-) -> List[str]:
-    """
-    Return sorted phyla appearing at least `min_assemblies` times in a JSON/ND-JSON file.
-    """
-    counts: Dict[str, int] = {}
-    with open(json_path, "r", encoding="utf-8") as f:
-        first = f.read(1)
-        f.seek(0)
-        if first == "[":
-            data = json.load(f)
-            for rec in (data if isinstance(data, list) else []):
-                ph = rec.get(rank)
-                # if ph.count("_")==3:
-                #     parts = ph.rsplit("_", 1)
-                #     ph=parts[0]
-                if ph:
-                    counts[ph] = counts.get(ph, 0) + 1
-        else:
-            for line in f:
-                if not line.strip():
-                    continue
-                rec = json.loads(line)
-                ph = rec.get(rank)
-                if ph:
-                    counts[ph] = counts.get(ph, 0) + 1
-    return sorted([ph for ph, n in counts.items() if n >= min_assemblies])
-
 def filter_max_distance_lineages(
     df: pd.DataFrame,
     max_distance: float = 1.0
@@ -712,48 +625,89 @@ def filter_max_distance_lineages(
         if (df.loc[taxon].drop(taxon) < max_distance).any()
     ]
     return df.loc[keep, keep]
+# Genes broadly distributed enough across bacterial lineages to be used in
+# the flagella-based phylogeny (see manuscript Methods). Every one of these
+# 37 genes has exactly 2 ortholog tree files (full-protein + HMM-region
+# alignments) in orthologous_trees/, i.e. 74 trees total, evenly split --
+# this matters for gene-level bootstrap resampling (see
+# build_flagella_phylogeny_with_support.py), since it means resampling by
+# gene doesn't need to correct for some genes contributing more trees than
+# others within this set.
+GENE_LIST_37 = ['FlgB', 'FlgC', 'FlgD', 'FlgE', 'FlgK', 'FlgL', 'FlhA', 'FlhB',
+                'FliC', 'FliD', 'FliE', 'FliF', 'FliG', 'FliH', 'FliI', 'FliK',
+                'FliM', 'FliN', 'FliP', 'FliQ', 'FliR', 'FliS', 'MotA', 'MotB',
+                'FliO', 'FliJ', 'FliL', 'FliW', 'FlaG',
+                'FlgM', 'FlgN', 'FlhG', 'FlhF', 'FlgJ',
+                'FlgG', 'FlgF', 'Transglycosylase']  # 37 genes
+
+# Paths relative to this script. Keep the ortholog trees alongside this file.
+SCRIPT_DIR = Path(__file__).resolve().parent
+TREE_DIRECTORY = SCRIPT_DIR / "orthologous_trees"
+OUTPUT_DIRECTORY = SCRIPT_DIR / "outputs"
+
+# Files too large to track on GitHub live in the repository's external data
+# folder (<repo root>/external_data/, git-ignored): unpack the Zenodo archive
+# and the GTDB reference downloads there, or set LBCA_DATA_DIR to wherever you
+# unpacked them. See the repository root README, "Data on Zenodo".
+REPO_ROOT = SCRIPT_DIR.parents[1]
+DATA_DIR = Path(os.environ.get("LBCA_DATA_DIR", REPO_ROOT / "external_data"))
+
+# Phyletic-distribution table (Zenodo).
+PHYLETIC_TSV = DATA_DIR / "flagellar_genes_phyletic_distribution.tsv"
+
+# GTDB lineage JSON used only to decorate leaf labels with their parent
+# (phylum) rank for the point-estimate tree; not used by the bootstrap.
+# Download from the FlagellaDB repository into DATA_DIR:
+# https://raw.githubusercontent.com/Jouline-Lab/FlagellaDB/main/public/GTDB214_lineage_ordered.json
+GTDB_LINEAGE_JSON = DATA_DIR / "GTDB214_lineage_ordered.json"
+
 #%%
+if __name__ == "__main__":
+    gene_list = GENE_LIST_37
+    tree_directory = TREE_DIRECTORY
+    output_directory = OUTPUT_DIRECTORY
+    output_directory.mkdir(exist_ok=True)
 
-gene_list=['FlgB', 'FlgC', 'FlgD', 'FlgE', 'FlgK', 'FlgL', 'FlhA', 'FlhB', 
-           'FliC', 'FliD', 'FliE', 'FliF', 'FliG', 'FliH', 'FliI', 'FliK',
-           'FliM', 'FliN', 'FliP', 'FliQ', 'FliR', 'FliS', 'MotA', 'MotB',
-           'FliO', 'FliJ', 'FliL', 'FliW', 'FlaG', 
-           'FlgM', 'FlgN', 'FlhG', 'FlhF', 'FlgJ', 
-           'FlgG', 'FlgF','Transglycosylase'] #37 genes
+    phyletic_tsv = PHYLETIC_TSV
+    if not Path(phyletic_tsv).is_file():
+        raise FileNotFoundError(
+            f"Phyletic-distribution table not found at {phyletic_tsv}. Download "
+            "flagellar_genes_phyletic_distribution.tsv from Zenodo into "
+            f"{DATA_DIR}, or set LBCA_DATA_DIR to where you unpacked it."
+        )
+    chosen_rank = "order"   # e.g., "phylum", "class", "order", "family", "genus", etc.
+    dist_df = build_distance_matrix(
+        tree_dir=tree_directory,
+        tsv_path=phyletic_tsv,
+        gene_list=gene_list,
+        rank=chosen_rank,
+        coverage_norm=True,
+        min_coverage=0.8,
+        min_representatives_per_taxon=2,
+        alpha=1.0,
+        weight_agg="sum",
+        topology_mode="rooted",
+        per_tree_equal_weighting=True,
+    )
 
-phyletic_tsv = r"C:\Users\selcuk.1\OneDrive - The Ohio State University\Desktop\Flagella\ortholog_lists\flagellar_genes_phyletic_distribution_withIDs_Mar20_2026.tsv"
-tree_directory = r"C:\Users\selcuk.1\OneDrive - The Ohio State University\Desktop\Flagella\hmmorder_trees"
-chosen_rank = "order"   # e.g., "phylum", "class", "order", "family", "genus", etc.
-dist_df = build_distance_matrix(
-    tree_dir=tree_directory,
-    tsv_path=phyletic_tsv,
-    gene_list=gene_list,
-    rank=chosen_rank,
-    coverage_norm=True,
-    min_coverage=0.8,
-    min_representatives_per_taxon=2,
-    alpha=0.8,
-    weight_agg="sum",
-    topology_mode="unrooted",
-    per_tree_equal_weighting=True,
-)
+    #%%
+    # Optional alternative: load an existing matrix instead of recomputing.
+    # Set this to a TSV path when needed; leave as None to retain the newly computed matrix.
+    distance_matrix_tsv_path = None
+    if distance_matrix_tsv_path:
+        dist_df = pd.read_csv(distance_matrix_tsv_path, sep="\t", index_col=0)
+    dist_df = dist_df.drop(index="-", columns="-", errors="ignore")
 
-#%%
-# Alternative route: load a precomputed distance matrix TSV instead of recomputing.
-distance_matrix_tsv_path = r"C:\Users\selcuk.1\OneDrive - The Ohio State University\Desktop\Flagella\phylogeny\flagella_phylogeny_37_genes_rooted_alpha0.8_cov0.8_phylum.distance.tsv"
-dist_df = pd.read_csv(distance_matrix_tsv_path, sep="\t", index_col=0)
-dist_df = dist_df.drop(index="-", columns="-", errors="ignore")
+    #%%
+    # Optional: add parent labels when the GTDB lineage JSON is available.
+    json_file = GTDB_LINEAGE_JSON
+    if Path(json_file).is_file():
+        dist_df_labeled = add_parent_labels(dist_df, json_file, parent_rank="phylum")
+        dist_df_labeled = filter_max_distance_lineages(dist_df_labeled, 1)
 
-#%%
-json_file=r"C:\Users\selcuk.1\OneDrive - The Ohio State University\Desktop\Flagella\ortholog_lists\gene_visualization_lineages\GTDB_taxonomic_distribution_visualize\GTDB214_lineage_ordered.json"
-dist_df_labeled = add_parent_labels(dist_df, json_file, parent_rank="phylum")
-dist_df_labeled = filter_max_distance_lineages(dist_df_labeled,1)
-
-#%%
-nj_tree = build_nj_tree(
-    dist_df,
-    newick_out=r"C:\Users\selcuk.1\OneDrive - The Ohio State University\Desktop\Flagella\phylogeny\flagella_phylogeny_37_genes_rooted_alpha0.8_phylum_cov0.8_NJ.nwk",
-    return_as_ete=False   # or True if you prefer an ete3.Tree
-)
-
-
+    #%%
+    nj_tree = build_nj_tree(
+        dist_df_labeled,
+        newick_out=output_directory / "flagella_phylogeny_37_genes_order_alpha1_cov0.8_NJ.nwk",
+        return_as_ete=False   # or True if you prefer an ete3.Tree
+    )

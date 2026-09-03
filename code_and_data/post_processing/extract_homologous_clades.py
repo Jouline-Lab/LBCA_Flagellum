@@ -84,33 +84,52 @@ def prune_tree_by_ids(tree_file, keep_ids, output_tree_file):
     return True
 
 
-def derive_hmm_tree_paths(gene_name, tree_dir):
+# -----------------------------------------------------------------------------
+# USER CONFIGURATION
+# `SEARCH_RESULTS_DIR` : per-gene Step 1/2 output, one folder per gene
+#                        (`<SEARCH_RESULTS_DIR>/<Gene>/<Gene>_...`). This is the
+#                        layout of pipeline_files_per_gene.zip on Zenodo and of
+#                        the homolog-search scripts' own output.
+# `ORTHOLOG_OUT_DIR`   : folder where the per-gene ortholog FASTAs and pruned
+#                        ortholog trees will be written.
+#
+# Both default to the repository's external data folder
+# (<repo root>/external_data/, git-ignored). Unpack the Zenodo archive there and
+# decompress its .gz files, or set LBCA_DATA_DIR to wherever you unpacked it.
+# See the repository root README, "Data on Zenodo".
+# -----------------------------------------------------------------------------
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+DATA_DIR = os.environ.get("LBCA_DATA_DIR", os.path.join(REPO_ROOT, "external_data"))
+
+SEARCH_RESULTS_DIR = os.path.join(DATA_DIR, "pipeline_files_per_gene")
+ORTHOLOG_OUT_DIR = os.path.join(DATA_DIR, "ortholog_lists")
+
+# A few trees were manually rerooted before clade boundaries were read off them,
+# because the automated outgroup rooting placed the root inaccurately. Those
+# rerooted copies are tracked here rather than coming from the search results.
+REROOTED_TREE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rerooted_trees")
+
+
+def gene_file(gene_name, filename):
+    """Path to one file inside a gene's search-results folder."""
+    return os.path.join(SEARCH_RESULTS_DIR, gene_name, filename)
+
+
+def derive_hmm_tree_paths(search_name):
     """Return the two candidate HMM-ordered tree filenames for a gene (regions / no-regions)."""
     return [
-        os.path.join(tree_dir, f"{gene_name}_hmm_E1000_db_hmmregions_FAMSA_gt0.1_hmmordered.tree"),
-        os.path.join(tree_dir, f"{gene_name}_hmm_E1000_db_FAMSA_gt0.1_hmmordered.tree"),
+        gene_file(search_name, f"{search_name}_hmm_E1000_db_hmmregions_FAMSA_gt0.1_hmmordered.tree"),
+        gene_file(search_name, f"{search_name}_hmm_E1000_db_FAMSA_gt0.1_hmmordered.tree"),
     ]
 
 
-def derive_m8_ortholog_tree_path(gene_name, tree_file, tree_dir):
+def derive_m8_ortholog_tree_path(gene_name, tree_file, out_dir):
     """Build the output ortholog-tree path for an m8-ordered input tree."""
     suffix = os.path.basename(tree_file)
     if "_db_" in suffix:
         suffix = suffix.split("_db_", 1)[1]
-        return os.path.join(tree_dir, f"{gene_name}_db_{suffix.replace('.tree', '_orthologs.tree')}")
-    return os.path.join(tree_dir, f"{gene_name}_{suffix.replace('.tree', '_orthologs.tree')}")
-
-
-# -----------------------------------------------------------------------------
-# USER CONFIGURATION
-# Replace each path below with the corresponding location on your machine.
-# `HMM_TREE_DIR`     : folder containing the HMM- and m8-ordered Newick trees.
-# `MSA_DIR`          : folder containing the tree-ordered FASTA alignments.
-# `ORTHOLOG_OUT_DIR` : folder where the per-gene ortholog FASTAs will be written.
-# -----------------------------------------------------------------------------
-HMM_TREE_DIR     = r"/path/to/hmmorder_trees"
-MSA_DIR          = r"/path/to/treeorder_msa"
-ORTHOLOG_OUT_DIR = r"/path/to/ortholog_lists"
+        return os.path.join(out_dir, f"{gene_name}_db_{suffix.replace('.tree', '_orthologs.tree')}")
+    return os.path.join(out_dir, f"{gene_name}_{suffix.replace('.tree', '_orthologs.tree')}")
 
 #%% Gene boundaries
 gene_boundaries = {
@@ -177,82 +196,87 @@ gene_boundaries = {
     "MotE": {"boundary": [["NZ_AP024401.1_284","NZ_FRAU01000010.1_67"],["JAEYOK010000016.1_113","JAILQQ010000206.1_11"],["CAMAQH010000001.1_43","JACPIN010000018.1_13"]],"hmmregion":0}, #Done
     "MotY": {"boundary": [["NZ_KB822603.1_18","CAIRAY010000119.1_4"]],"hmmregion":0}, #Done
     "SwrB": {"boundary": [["JAFLRU010000043.1_11","NZ_CP048020.1_146"]],"hmmregion":0,
-             "tree": fr"{HMM_TREE_DIR}\SwrB_db_FAMSA_gt0.1_m8ordered_rerooted.tree",
-             "fasta": fr"{MSA_DIR}\SwrB_db_FAMSA_gt0.1_treeordered.fasta"}, # Done
+             "tree": os.path.join(REROOTED_TREE_DIR, "SwrB_db_FAMSA_gt0.1_m8ordered_rerooted.tree"),
+             "fasta": gene_file("SwrB", "SwrB_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
     "PflA": {"boundary": [["NZ_LN831025.1_1648","MAAG01000128.1_20"]],"hmmregion":0,
-             "tree": fr"{HMM_TREE_DIR}\PflA_db_FAMSA_gt0.1_m8ordered.tree",
-             "fasta": fr"{MSA_DIR}\PflA_db_FAMSA_gt0.1_treeordered.fasta"}, # Done
+             "tree": gene_file("PflA", "PflA_db_FAMSA_gt0.1_m8ordered.tree"),
+             "fasta": gene_file("PflA", "PflA_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
     "PflB": {"boundary": [["NZ_LN831025.1_380","JAIOSF010000021.1_111"]],"hmmregion":0,
-             "tree": fr"{HMM_TREE_DIR}\PflB_db_FAMSA_gt0.1_m8ordered.tree",
-             "fasta": fr"{MSA_DIR}\PflB_db_FAMSA_gt0.1_treeordered.fasta"}, # Done
+             "tree": gene_file("PflB", "PflB_db_FAMSA_gt0.1_m8ordered.tree"),
+             "fasta": gene_file("PflB", "PflB_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
     "MotC": {"boundary": [["NZ_JACHIK010000011.1_65","JAHDFM010000008.1_6"]],"hmmregion":0,
-             "tree": fr"{HMM_TREE_DIR}\MotC_db_FAMSA_gt0.1_m8ordered.tree",
-             "fasta": fr"{MSA_DIR}\MotC_db_FAMSA_gt0.1_treeordered.fasta"}, # Done
+             "tree": gene_file("MotC", "MotC_db_FAMSA_gt0.1_m8ordered.tree"),
+             "fasta": gene_file("MotC", "MotC_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
     "FliB": {"boundary": [["CAKQYU010000002.1_226","CAKQKE010000010.1_26"]],"hmmregion":0}, #Done 
     "MotX": {"boundary": [["AP025472.1_2530","CAAGDP010000202.1_7"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\MotX_VIBPA_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\MotX_VIBPA_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("MotX", "MotX_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("MotX", "MotX_db_FAMSA_gt0.1_treeordered.fasta")
                 },
     "MotK": {"boundary": [["NC_007493.2_2953","NZ_JABFCX010000003.1_989"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\MotK_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\MotK_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("MotK", "MotK_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("MotK", "MotK_db_FAMSA_gt0.1_treeordered.fasta")
                 }, #Done
     "FlrC": {"boundary": [["NZ_BBIU01000036.1_34","QKED01000117.1_6"]],"hmmregion":0}, #Done
     "FlrA": {"boundary": [["NZ_CP018616.1_1940","JAABTJ010000001.1_62"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\FlrA_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\FlrA_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("FlrA", "FlrA_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("FlrA", "FlrA_db_FAMSA_gt0.1_treeordered.fasta")
                 },
     "SwrA": {"boundary": [["NZ_LSBB01000001.1_575","NZ_JAKZKS010000002.1_50"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\SwrA_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\SwrA_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("SwrA", "SwrA_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("SwrA", "SwrA_db_FAMSA_gt0.1_treeordered.fasta")
                 },
     "FlcD": {"boundary": [["NC_001318.1_230","DNNS01000309.1_8"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\FlcD_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\FlcD_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("FlcD", "FlcD_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("FlcD", "FlcD_db_FAMSA_gt0.1_treeordered.fasta")
                 },
     "FlcA": {"boundary": [["NC_001318.1_316","NZ_AP024401.1_322"],["QNBN01000028.1_5","JAFGXN010000061.1_1"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\FlcA_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\FlcA_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("FlcA", "FlcA_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("FlcA", "FlcA_db_FAMSA_gt0.1_treeordered.fasta")
                 }, #A secondary clade that is also annoated as FlcA but it is not very similar sequence-wise
     "FlcB": {"boundary": [["NC_001318.1_56","JACRPF010000011.1_139"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\FlcB_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\FlcB_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("FlcB", "FlcB_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("FlcB", "FlcB_db_FAMSA_gt0.1_treeordered.fasta")
                 },
     "FlcC": {"boundary": [["NZ_JACHFC010000001.1_218","JAKSCK010000028.1_18"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\FlcC_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\FlcC_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("FlcC", "FlcC_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("FlcC", "FlcC_db_FAMSA_gt0.1_treeordered.fasta")
                 },
     "FlaY": {"boundary": [["NC_014375.1_2630","JAJZGY010000023.1_20"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\FlaY_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\FlaY_db_FAMSA_gt0.1_treeordered.fasta"
+                "tree": gene_file("FlaY", "FlaY_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("FlaY", "FlaY_db_FAMSA_gt0.1_treeordered.fasta")
                 },
-    "FapA": {"boundary": [["NZ_CP069213.1_501","JAFIGE010000066.1_15"]],"hmmregion":0}, # second clade is MinC
+    # Searched under its Pfam domain name, DUF342, but reported as FapA: the
+    # search results live in DUF342/, while every output here and downstream
+    # (ortholog FASTA/tree names, and the FapA_* columns of the phyletic
+    # distribution table) uses FapA.
+    "FapA": {"boundary": [["NZ_CP069213.1_501","JAFIGE010000066.1_15"]],"hmmregion":0,
+             "search_name": "DUF342"}, # second clade is MinC
     "DUF1217": {"boundary": [["NZ_MDET01000003.1_55","JACQAI010000194.1_6"]],"hmmregion":0},
     "DUF6470": {"boundary": [["NZ_CABKRX010000062.1_30","CP060226.1_2110"],["JAAYOS010000013.1_8","JAHHUB010000032.1_2"]], "hmmregion":0},
     "DUF327": {"boundary": [["CAJUQB010000006.1_41","JAJXUE010000021.1_9"]], "hmmregion":0},
     "Transglycosylase":{"boundary":[["UCEZ01000055.1_32","DFNM01000065.1_5"]],"hmmregion":0},
     "FljA" : {"boundary":[["NC_003197.2_2734","JAEWTL010000044.1_18"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\FljA_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\FljA_db_FAMSA_gt0.1_treeordered.fasta"},
+                "tree": gene_file("FljA", "FljA_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("FljA", "FljA_db_FAMSA_gt0.1_treeordered.fasta")},
     "YdiV" : {"boundary":[["NZ_CP040443.1_4484","NZ_JAGGMQ010000001.1_2054"]],"hmmregion":0,
-                "tree": fr"{HMM_TREE_DIR}\YdiV_db_FAMSA_gt0.1_m8ordered.tree",
-                "fasta": fr"{MSA_DIR}\YdiV_db_FAMSA_gt0.1_treeordered.fasta"},
+                "tree": gene_file("YdiV", "YdiV_db_FAMSA_gt0.1_m8ordered.tree"),
+                "fasta": gene_file("YdiV", "YdiV_db_FAMSA_gt0.1_treeordered.fasta")},
     "YvyF" : {"boundary":[["NZ_CP026362.1_4267","JAAXZX010000068.1_1"]],"hmmregion":0},
     "FlgR" : {"boundary":[["NC_017737.1_895","JAMJTW010000008.1_195"]],"hmmregion":0,
-              "tree": fr"{HMM_TREE_DIR}\FlgR_db_FAMSA_gt0.1_m8ordered.tree",
-              "fasta": fr"{MSA_DIR}\FlgR_db_FAMSA_gt0.1_treeordered.fasta"},
+              "tree": gene_file("FlgR", "FlgR_db_FAMSA_gt0.1_m8ordered.tree"),
+              "fasta": gene_file("FlgR", "FlgR_db_FAMSA_gt0.1_treeordered.fasta")},
     "FliF2" : {"boundary":[["NZ_AP021861.1_3272","JABAAH010000011.1_11"]],"hmmregion":0,
-              "tree": fr"{HMM_TREE_DIR}\FliF2_db_FAMSA_gt0.1_m8ordered.tree",
-              "fasta": fr"{MSA_DIR}\FliF2_db_FAMSA_gt0.1_treeordered.fasta"},
+              "tree": gene_file("FliF2", "FliF2_db_FAMSA_gt0.1_m8ordered.tree"),
+              "fasta": gene_file("FliF2", "FliF2_db_FAMSA_gt0.1_treeordered.fasta")},
     "MotB2" : {"boundary":[["VGZQ01000054.1_9","NZ_JPVZ01000003.1_410"],["VFQY01000009.1_14","DRJZ01000039.1_8",-1]],"hmmregion":0,
-              "tree": fr"{HMM_TREE_DIR}\MotB2_db_FAMSA_gt0.1_m8ordered.tree",
-              "fasta": fr"{MSA_DIR}\MotB2_db_FAMSA_gt0.1_treeordered.fasta"},
+              "tree": gene_file("MotB2", "MotB2_db_FAMSA_gt0.1_m8ordered.tree"),
+              "fasta": gene_file("MotB2", "MotB2_db_FAMSA_gt0.1_treeordered.fasta")},
     "FliH2" : {"boundary":[["NZ_CP022998.1_1258","JAFLCG010000011.1_137"]],"hmmregion":0,
-              "tree": fr"{HMM_TREE_DIR}\FliH2_db_FAMSA_gt0.1_m8ordered.tree",
-              "fasta": fr"{MSA_DIR}\FliH2_db_FAMSA_gt0.1_treeordered.fasta"},
+              "tree": gene_file("FliH2", "FliH2_db_FAMSA_gt0.1_m8ordered.tree"),
+              "fasta": gene_file("FliH2", "FliH2_db_FAMSA_gt0.1_treeordered.fasta")},
     "FlgX": {"boundary": [["NZ_CP014991.1_809","NZ_MLAR01000006.1_81"],["NZ_NHYM01000007.1_20","DIZY01000072.1_24"],["NZ_LN831025.1_165","WGAU01000051.1_18"]],"hmmregion":0,
-            "tree": r"hmmorder_trees\FlgX_db_FAMSA_gt0.1_m8ordered.tree",
-            "fasta": r"treeorder_msa\FlgX_db_FAMSA_gt0.1_treeordered.fasta"},
+            "tree": gene_file("FlgX", "FlgX_db_FAMSA_gt0.1_m8ordered.tree"),
+            "fasta": gene_file("FlgX", "FlgX_db_FAMSA_gt0.1_treeordered.fasta")},
     
 }
 print(gene_boundaries.keys())
@@ -263,6 +287,11 @@ for gene_name in gene_boundaries:
     gene_data = gene_boundaries[gene_name]
     hmmregion = gene_data["hmmregion"]
     boundary = gene_data["boundary"]
+
+    # A gene searched under a different name (e.g. FapA, searched as its Pfam
+    # domain DUF342) reads its inputs under `search_name` but writes every
+    # output under `gene_name`, which is the name used downstream.
+    search_name = gene_data.get("search_name", gene_name)
 
     if hmmregion == 1:
         hmmregion_txt = "hmmregions_"
@@ -275,15 +304,16 @@ for gene_name in gene_boundaries:
         fasta_file = gene_data["fasta"]
         tree = gene_data["tree"]
     else:
-        tree = os.path.join(
-            HMM_TREE_DIR,
-            f"{gene_name}_hmm_E1000_db_{hmmregion_txt}FAMSA_gt0.1_hmmordered.tree",
+        tree = gene_file(
+            search_name,
+            f"{search_name}_hmm_E1000_db_{hmmregion_txt}FAMSA_gt0.1_hmmordered.tree",
         )
-        fasta_file = os.path.join(
-            MSA_DIR,
-            f"{gene_name}_hmm_E1000_db_{hmmregion_txt}FAMSA_gt0.1_treeordered.fasta",
+        fasta_file = gene_file(
+            search_name,
+            f"{search_name}_hmm_E1000_db_{hmmregion_txt}FAMSA_gt0.1_treeordered.fasta",
         )
 
+    os.makedirs(ORTHOLOG_OUT_DIR, exist_ok=True)
     out_file = os.path.join(
         ORTHOLOG_OUT_DIR,
         f"{gene_name}_hmm_E1000_db_FAMSA_gt0.1_treeordered_orthologs.fasta",
@@ -291,15 +321,19 @@ for gene_name in gene_boundaries:
     ortholog_ids = find_leaf_nodes_within_boundaries(boundary, tree)
     filter_fasta_by_ids(fasta_file, ortholog_ids, out_file)
 
+    # Ortholog trees go to ORTHOLOG_OUT_DIR alongside the FASTAs rather than
+    # back into the search-results folder, which is read-only input.
     is_m8_tree = "m8" in os.path.basename(tree).lower()
     if is_m8_tree:
-        out_tree = derive_m8_ortholog_tree_path(gene_name, tree, HMM_TREE_DIR)
+        out_tree = derive_m8_ortholog_tree_path(gene_name, tree, ORTHOLOG_OUT_DIR)
         prune_tree_by_ids(tree, ortholog_ids, out_tree)
     else:
-        for hmm_tree in derive_hmm_tree_paths(gene_name, HMM_TREE_DIR):
+        for hmm_tree in derive_hmm_tree_paths(search_name):
             if not os.path.exists(hmm_tree):
                 print(f"HMM tree not found for {gene_name}: {hmm_tree}")
                 continue
-            out_tree = hmm_tree.replace(".tree", "_orthologs.tree")
-            prune_tree_by_ids(hmm_tree, ortholog_ids, out_tree)
+            out_name = os.path.basename(hmm_tree).replace(".tree", "_orthologs.tree")
+            if search_name != gene_name:
+                out_name = out_name.replace(f"{search_name}_", f"{gene_name}_", 1)
+            prune_tree_by_ids(hmm_tree, ortholog_ids, os.path.join(ORTHOLOG_OUT_DIR, out_name))
 
