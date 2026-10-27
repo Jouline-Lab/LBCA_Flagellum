@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
 <title>Ancestral Gene Heatmap</title>
 <style>
 * { box-sizing: border-box; }
@@ -499,19 +501,16 @@ function buildSVG() {
 const exportBtn = document.getElementById('exportBtn');
 const exportStatus = document.getElementById('exportStatus');
 
-exportBtn.addEventListener('click', async () => {
-  exportStatus.textContent = '';
-  const svg = buildSVG();
-  const downloads = await window.claude.use('downloads');
-  if (!downloads) {
-    exportStatus.textContent = 'Downloads are not available in this view.';
-    return;
-  }
-  try {
-    await downloads.save({ filename: 'figure3b_ancestral_heatmap.svg', data: svg });
-    exportStatus.textContent = 'Saved.';
-  } catch (err) {
-    exportStatus.textContent = 'Could not save (' + (err && err.code ? err.code : 'error') + '). Ask Claude for the raw SVG text instead.';
-  }
+exportBtn.addEventListener('click', () => {
+  const blob = new Blob([buildSVG()], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'figure4b_ancestral_heatmap.svg';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  exportStatus.textContent = 'Saved.';
 });
 </script>

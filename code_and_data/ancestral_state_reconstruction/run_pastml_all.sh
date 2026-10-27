@@ -9,7 +9,7 @@
 #SBATCH --nodes=1
 #SBATCH --output=%j_pastml_all.out
 #SBATCH --time=3-0:0:0
-#SBATCH --account=PAS1794
+#SBATCH --account=YOUR_ACCOUNT
 
 # Runs all three PastML ancestral-state-reconstruction jobs back to back,
 # in one SLURM submission:
@@ -20,9 +20,7 @@
 #   3. hybrid, family -- same idea at family resolution
 #      (build_hybrid_tree.py --rank family)
 #
-# `set -e` stops the whole job the moment any single pastml call fails,
-# rather than silently burning the rest of the walltime budget on later
-# steps whose inputs may now be suspect.
+# `set -e` stops the job as soon as any pastml call fails.
 #
 # Before each run, list_variant_genes.py filters the --columns list down to
 # genes that actually vary in that file. PastML's ML reconstruction cannot
@@ -33,11 +31,12 @@
 # single value they were invariant at) are logged to
 # <run_dir>/skipped_invariant_genes.txt.
 #
-# Walltime: the three steps were previously timed separately at roughly
-# 12h (genome), 30h (hybrid order), and 30h (hybrid family) as independent
-# SLURM jobs; --time above is set generously above their sum for a single
-# sequential job. Recalibrate against actual observed runtimes if this job
-# is resubmitted.
+# Walltime: about 12 h (genome-level), 30 h (hybrid order) and 30 h (hybrid
+# family) at the resources above.
+#
+# pastml is called through pastml_wrapper.py, which patches a missing
+# `import sys` in pastml.acr that makes --recursion_limit crash (needed for the
+# deep genome-level tree).
 
 set -euo pipefail
 
@@ -54,6 +53,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #                Defaults to the same outputs/ folder, so each run lands in
 #                outputs/results_<label>/ as documented in this folder's README.
 # `VENV_PATH`  : path to the virtualenv where `pip install pastml` was run.
+# Also set the #SBATCH --account line above to your own allocation.
 # `THREADS`    : must match --cpus-per-task above.
 # -----------------------------------------------------------------------------
 INPUT_DIR="${SCRIPT_DIR}/outputs"
@@ -75,7 +75,7 @@ run_pastml () {
 
     echo "[$(date)] Starting ${label} -> $run_dir"
     # shellcheck disable=SC2086
-    pastml \
+    python "$SCRIPT_DIR/pastml_wrapper.py" \
         -t "$tree" \
         -d "$data" \
         -s , -i 0 -c $gene_cols \

@@ -1,33 +1,19 @@
 """
-Correct, unconstrained Transfer Bootstrap Expectation (TBE; Lemoine et al.
-2018), replacing the earlier R/TreeDist-based attempt.
+Transfer Bootstrap Expectation (TBE; Lemoine et al. 2018, Nature 556:452-456)
+for the flagella-based trees, from the gene-resampling bootstrap replicates
+written by build_flagella_phylogeny_with_support.py.
 
-Why the earlier attempt was wrong: TreeDist::TransferDistance computes a
-globally-constrained ONE-TO-ONE matching between tree1's splits and tree2's
-splits (each replicate branch can be claimed by at most one reference
-branch) -- this is a legitimate whole-tree dissimilarity measure (and the
-correct tool for the earlier GTDB whole-tree transfer-distance comparison),
-but it is NOT what TBE needs. Lemoine's actual definition has each
-reference branch search independently for its own single best match
-anywhere in the replicate tree, with no exclusivity -- the same replicate
-branch is allowed to be the best match for many different reference
-branches simultaneously. The constrained version can only ever do as well
-or worse than the unconstrained one, which is exactly why the first attempt
-came out lower than classical bootstrap support instead of higher (the
-direction reported throughout the TBE literature).
+For every reference branch, each replicate contributes the transfer distance
+to its closest branch in that replicate (independently per reference branch,
+as in Lemoine's definition), and TBE = 1 - mean distance / (p - 1), where p
+is the size of the smaller side of the reference split.
 
-Implementation: for each reference split A (boolean membership vector over
-n taxa) and each replicate split B, the transfer distance is
-    dist(A, B) = min(hamming(A, B), n - hamming(A, B))
-(matching B or its complement, whichever is closer -- a bipartition has no
-identified "side"). hamming(A, B) = |A| + |B| - 2*|A intersect B|, so all
-pairwise distances between a reference tree's m1 splits and a replicate
-tree's m2 splits reduce to one matrix multiplication (A_bool @ B_bool.T),
-making this fast even at order-level (~560 taxa, ~560 splits) x 100
-replicates. Per Lemoine et al., trivial single-taxon splits (present at
-every leaf, "distance <= p-1 by construction") are included as candidate
-matches in the replicate tree's split pool, since BOOSTER's guarantee that
-transfer distance never exceeds (p-1) relies on them being available.
+For a reference split A and a replicate split B (boolean membership vectors
+over n taxa), dist(A, B) = min(hamming(A, B), n - hamming(A, B)), matching B or
+its complement. hamming(A, B) = |A| + |B| - 2*|A intersect B|, so all pairwise
+distances for one replicate come from a single matrix product. Single-taxon
+splits are included in the replicate's candidate pool, as in BOOSTER, which
+bounds every transfer distance by p - 1.
 """
 
 import os
@@ -90,8 +76,7 @@ def transfer_distances(ref_bool, rep_bool, n):
     return np.minimum(hamming, n - hamming)
 
 
-def compute_tbe(ref_tree_path, replicate_paths_or_lines, rank):
-    ref_tree = Tree(ref_tree_path, format=0)
+def compute_tbe(ref_tree, replicate_lines, rank):
     taxa_order = sorted(ref_tree.get_leaf_names())
     n = len(taxa_order)
 
@@ -102,7 +87,7 @@ def compute_tbe(ref_tree_path, replicate_paths_or_lines, rank):
     min_dist_sum = np.zeros(n_ref, dtype=np.float64)
     n_replicates = 0
 
-    for line in replicate_paths_or_lines:
+    for line in replicate_lines:
         rep_tree = Tree(line.strip(), format=9)
         if set(rep_tree.get_leaf_names()) != set(taxa_order):
             raise ValueError(f"[{rank}] replicate tip set does not match reference")
@@ -120,32 +105,20 @@ def compute_tbe(ref_tree_path, replicate_paths_or_lines, rank):
     return ref_tree, ref_members, clade_size, mean_dist, tbe_pct, n_replicates
 
 
-def ensure_clean_reference_tree(rank):
-    """order/class/family reference trees are written with phylum-decorated
-    tip labels (e.g. "o__X _p__Y_", sanitized by ete3's writer); TBE needs
-    tip names matching the bare-name replicate trees. Build the stripped
-    version once and cache it to disk, named after the bootstrap tree it
-    was stripped from so the two files stay visually linked."""
-    decorated_path = os.path.join(
-        SUPPORT_DIR, f"flagella_phylogeny_37_genes_{rank}_alpha1_cov0.8_NJ_bootstrap100.nwk")
-    clean_path = os.path.join(
-        SUPPORT_DIR, f"flagella_phylogeny_37_genes_{rank}_alpha1_cov0.8_NJ_bootstrap100_phylum_stripped.nwk")
-    if os.path.exists(clean_path):
-        return clean_path
-    t = Tree(decorated_path, format=0)
+def bare_tip_reference_tree(rank):
+    """The support-annotated point-estimate tree with the phylum suffix removed
+    from tip names (e.g. "o__X _p__Y_" as written by ete3), so the tips match
+    the bare-name replicate trees."""
+    t = Tree(os.path.join(
+        SUPPORT_DIR, f"flagella_phylogeny_37_genes_{rank}_alpha1_cov0.8_NJ_bootstrap100.nwk"), format=0)
     for leaf in t.get_leaves():
         leaf.name = leaf.name.split(" (p__")[0].split(" _p__")[0]
-    t.write(format=0, outfile=clean_path)
-    return clean_path
+    return t
 
 
 def main():
     for rank in ["phylum", "class", "order", "family"]:
-        ref_path = (
-            os.path.join(SUPPORT_DIR, f"flagella_phylogeny_37_genes_{rank}_alpha1_cov0.8_NJ_bootstrap100.nwk")
-            if rank == "phylum"
-            else ensure_clean_reference_tree(rank)
-        )
+        ref_path = os.path.join(SUPPORT_DIR, f"flagella_phylogeny_37_genes_{rank}_alpha1_cov0.8_NJ_bootstrap100.nwk")
         rep_path = os.path.join(
             SUPPORT_DIR, f"flagella_phylogeny_37_genes_{rank}_alpha1_cov0.8_NJ_bootstrap100_replicates.nwk")
         if not os.path.exists(ref_path) or not os.path.exists(rep_path):
@@ -155,11 +128,9 @@ def main():
         with open(rep_path) as f:
             lines = f.readlines()
 
-        ref_tree, members, sizes, mean_dist, tbe_pct, n_rep = compute_tbe(ref_path, lines, rank)
+        ref_tree, members, sizes, mean_dist, tbe_pct, n_rep = compute_tbe(bare_tip_reference_tree(rank), lines, rank)
 
-        # Annotate TBE% onto the reference tree's internal branches (in place
-        # of classical bootstrap support) and save it as the primary
-        # deliverable -- a tree, not just a table.
+        # TBE% replaces the classical bootstrap support on the internal branches.
         clade_to_tbe = {frozenset(m): t for m, t in zip(members, tbe_pct)}
         n_annotated = 0
         for node in ref_tree.traverse():

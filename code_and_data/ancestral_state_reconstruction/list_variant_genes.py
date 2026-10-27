@@ -8,9 +8,7 @@ PastML's ML ancestral reconstruction cannot handle a character with zero
 variance (a gene absent, or present, in every single row): there's
 nothing for a 2-state likelihood model to infer, but instead of reporting
 that trivially, its likelihood code crashes with a numpy broadcasting
-error (observed with FljA/SwrA at low prevalence thresholds, and more
-genes as the order-level threshold rises and more marginal genes drop to
-zero variance). Since PastML reconstructs all requested --columns in one
+error. Since PastML reconstructs all requested --columns in one
 multiprocessing pool, a single invariant gene kills the whole run before
 any output is written -- so these need to be excluded from --columns
 before the run, not discovered by it crashing.

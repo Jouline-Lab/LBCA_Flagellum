@@ -5,20 +5,14 @@ its leaf names match the corresponding `order`/`family` column of the
 phyletic distribution table.
 
 Leaf labels in these trees are Newick-quoted composites of the group and
-its phylum, e.g. 'o__SURF-12 (p__OLB16)' for order-level trees or
-'f__Bacillaceae_G _p__Bacillota_' for family-level trees (the two
-decoration styles come from different upstream steps -- parenthesized for
-the order-level visualization tree, underscore-delimited for the
-family-level TBE-support tree). This strips whichever suffix is present,
+its phylum, either 'o__SURF-12 (p__OLB16)' or, as ete3 writes it,
+'f__Bacillaceae_G _p__Bacillota_'. This strips whichever suffix is present,
 leaving just the bare group token (e.g. "o__SURF-12" or
 "f__Bacillaceae_G"), which is exactly the format used in the `order`/
 `family` column of flagellar_genes_phyletic_distribution.tsv.
 
-Internal node labels are left untouched -- for the order-level NJ tree
-these are plain placeholders (e.g. "Inner433") with no taxonomy embedded;
-for the family-level TBE-support tree these are bootstrap support values,
-which downstream steps (build_hybrid_tree.py, PastML) don't read, so
-leaving them in place is harmless.
+Internal node labels (NJ placeholders or support values) are left as they
+are. build_hybrid_tree.py and PastML do not read them.
 
 Usage: python clean_order_level_tree.py --rank order|family --input PATH [--output PATH]
 

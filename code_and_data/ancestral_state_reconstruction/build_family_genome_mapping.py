@@ -5,7 +5,7 @@ Builds a minimal assembly -> family lookup table for build_hybrid_tree.py
 the full presence/absence matrix).
 
 genome_level_presence_absence.csv deliberately only carries 'assembly' and
-'order' -- every other column in it is a gene column (build_order_level_
+'order' -- every other column in it is a gene column (build_hybrid_tree_
 presence_absence.py and summarize_pastml_runs.py both infer gene columns
 as "everything that isn't assembly/order"), so adding a 'family' column
 there directly would silently corrupt that inference. This writes the

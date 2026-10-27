@@ -305,6 +305,18 @@ const SIDE_HUE = {
 };
 const L_INTENSE = 40, L_LIGHT = 85; // percent lightness
 
+// Adobe Illustrator's SVG importer doesn't recognize hsl() fills (they render
+// as black on import), so phylum colors are stored as hex -- works identically
+// on screen and in the SVG export.
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = (n) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = (x) => Math.round(255 * x).toString(16).padStart(2, '0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+
 function assignPhylumColors(sections) {
   const bySide = {};
   const colorFor = {};
@@ -315,7 +327,7 @@ function assignPhylumColors(sections) {
     const sideColorFor = {};
     order.forEach((phylum, i) => {
       const l = order.length > 1 ? L_INTENSE + (L_LIGHT - L_INTENSE) * (i / (order.length - 1)) : (L_INTENSE + L_LIGHT) / 2;
-      sideColorFor[phylum] = `hsl(${hue}, ${sat}%, ${l.toFixed(1)}%)`;
+      sideColorFor[phylum] = hslToHex(hue, sat, l);
     });
     bySide[sec.title] = { order, colorFor: sideColorFor };
     Object.assign(colorFor, sideColorFor);

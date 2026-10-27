@@ -10,14 +10,14 @@ tree).
 Works for either rank via --rank order|family:
   - order:  backbone = outputs/flagella_order_phylogeny_simplified.tree
             (bare "o__..." leaves), grafted using the `order` column.
-  - family: backbone = a rooted, bare "f__..." version of the family-level
-            flagella phylogeny (see README/session notes for how that's
-            produced), grafted using the `family` column.
+  - family: backbone = outputs/flagella_family_phylogeny_simplified.tree
+            (bare "f__..." leaves), grafted using the `family` column of
+            outputs/family_genome_mapping.csv (pass it as --genome-level-csv).
 
 For each group leaf in the backbone tree:
-  - find that group's member genomes (from genome_level_presence_absence.csv,
-    which already carries an `order` column per assembly -- a `family`
-    column must be added there before this can be run at --rank family),
+  - find that group's member genomes (the `order` column of
+    genome_level_presence_absence.csv, or the `family` column of
+    family_genome_mapping.csv),
   - find the MRCA of those genomes in the GTDB tree,
   - graft a copy of that whole GTDB subtree in place of the group leaf,
     keeping the backbone tree's original branch length as the stem
@@ -26,7 +26,7 @@ For each group leaf in the backbone tree:
 A group with only one sampled genome has no real "subtree" -- the leaf is
 just renamed to that genome's accession rather than grafted.
 
-Caveat worth keeping in mind before using the output: branch lengths on
+Branch lengths on
 the two halves of the resulting tree are in different, non-comparable
 units -- the backbone's lengths come from flagellar-gene co-occurrence
 distances, the grafted subtrees' lengths come from GTDB's bac120

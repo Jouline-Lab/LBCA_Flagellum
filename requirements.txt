@@ -1,0 +1,7 @@
+pandas
+numpy
+ete3
+biopython
+plotly
+matplotlib
+openpyxl

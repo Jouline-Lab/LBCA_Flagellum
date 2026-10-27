@@ -1,6 +1,6 @@
 # Stage 1 - Homolog search pipeline
 
-HMM/m8 search outputs and large alignment files for all genes are on [Zenodo](../../README.md#data-on-zenodo) (link to be added). This folder contains the search scripts and `input_sequences/` HMM/FASTA inputs used to search for homologs of flagellar proteins before the post-processing steps. The two shell scripts are kept separate because they start from different input types:
+The search outputs and alignments for all 85 searches are on Zenodo (`pipeline_files_per_gene.zip`, see the root README, "Data"), so this stage only needs to be rerun to repeat the searches. This folder contains the search scripts and `input_sequences/` HMM/FASTA inputs used to search for homologs of flagellar proteins before the post-processing steps. The two shell scripts are kept separate because they start from different input types:
 
 - `hmm_search.sh` starts from HMM profiles and runs HMMER against the GTDB protein database.
 - `mmseqs2_search_pipeline.sh` starts from FASTA query sequences and runs MMseqs2 against the GTDB protein database.
@@ -9,7 +9,7 @@ Both scripts retrieve matching GTDB sequences, build FASTA files, align the sequ
 
 ## Alignment and tree inference
 
-FAMSA v2.2.2 was run with default settings. Alignment columns containing more than 90% gaps were trimmed using trimAl v1.4 with the `-gt 0.1` option, and gene trees were inferred from the trimmed alignments using FastTree v2.1.11 (the OpenMP build `FastTreeMP` in the shell scripts).
+HMMER searches used E-value 1000 and kept the top 50,000 hits (100,000 for MotA, MotB and FliC). FAMSA v2.2.2 was run with default settings. Alignment columns containing more than 90% gaps were trimmed using trimAl v1.4 with the `-gt 0.1` option, and gene trees were inferred from the trimmed alignments using FastTree v2.1.11 (the OpenMP build `FastTreeMP` in the shell scripts).
 
 ## Required Software
 
@@ -34,8 +34,8 @@ The HMM-based script also requires the helper scripts in this folder:
 Called by `hmm_search.sh` after `hmmsearch`. Reads the text output (lines starting with `>>`), keeps the first *N* hits, and writes accessions for MMseqs2 subdatabase creation.
 
 ```bash
-python hmm_header_get.py search_results/FapA/FapA_hmmsearch_E1000.txt 50000
-# -> search_results/FapA/FapA_hmmsearch_E1000_headers.txt
+python hmm_header_get.py external_data/pipeline_files_per_gene/CsrA/CsrA_hmmsearch_E1000.txt 50000
+# -> external_data/pipeline_files_per_gene/CsrA/CsrA_hmmsearch_E1000_headers.txt
 ```
 
 UniProt-style headers (`tr|ACCESSION|...`) are reduced to the accession token; other header formats use the first whitespace-delimited field.
@@ -66,8 +66,8 @@ Expected layout:
 input_sequences/
   CsrA/
     CsrA.hmm
-  FapA/
-    FapA.hmm
+  DUF342/
+    DUF342.hmm
   FlaG/
     FlaG.hmm
   MotB/
@@ -75,6 +75,8 @@ input_sequences/
   FliH/
     FliH.fasta
 ```
+
+Output folders and file names follow the query folder name. FapA is searched as `DUF342/` (its Pfam domain, PF03961), the name its results carry on Zenodo. `post_processing/extract_homologous_clades.py` renames it to FapA.
 
 For `hmm_search.sh`, each gene folder should contain one or more `.hmm` files:
 
@@ -109,7 +111,7 @@ GTDB_FASTA="/path/to/GTDB.fasta"
 FAMSA_BIN="/path/to/famsa"
 TRIMAL_BIN="/path/to/trimal"
 FASTTREE_BIN="/path/to/FastTreeMP"
-gene_names=(CsrA FlaG FapA)
+gene_names=(CsrA FlaG DUF342)
 ```
 
 Input and output folders are derived from the script's own location and need no editing.

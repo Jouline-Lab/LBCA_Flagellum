@@ -41,7 +41,7 @@ EVALUE=1000
 THREADS="${SLURM_CPUS_PER_TASK:-40}"
 
 # Example list. Edit this list and the SBATCH array range together.
-gene_names=(CsrA FlaG FapA)
+gene_names=(CsrA FlaG DUF342)
 
 if (( SLURM_ARRAY_TASK_ID >= ${#gene_names[@]} )); then
     echo "SLURM_ARRAY_TASK_ID ${SLURM_ARRAY_TASK_ID} is outside the gene_names array."

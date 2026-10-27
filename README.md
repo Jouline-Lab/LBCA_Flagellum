@@ -1,93 +1,83 @@
-# GitHub Repository for the Manuscript titled "The last bacterial common ancestor encoded a complex flagellum".
+# The last bacterial common ancestor encoded the components of a functionally complete flagellum
 
-Code and example data for searching flagellar protein homologs in GTDB, curating orthologous sequences and trees, and building a flagella-based taxon phylogeny.
+Code and data for the manuscript of the same title. The pipeline searches 80,789 GTDB r214 bacterial proteomes for 81 flagellar protein groups, curates orthologous groups from score-ordered gene trees, builds a flagella-based phylogeny of bacterial lineages, compares it with the GTDB tree, and reconstructs which flagellar genes were present in the last bacterial common ancestor (LBCA).
 
-## Repository layout
+- **Data (Zenodo):** https://doi.org/10.5281/zenodo.22266385
+- **Interactive database (FlagellaDB):** https://www.flagelladb.org, source code at https://github.com/Jouline-Lab/FlagellaDB
+- **Orthologous-group extraction for every group (Fig. S1, interactive):** https://www.flagelladb.org/transparency/orthologous-groups?group=FliI
 
-```text
-Repository/
-├── code_and_data/
-│   ├── homolog_search_pipeline/        # Stage 1 — homolog search, alignment, gene trees
-│   ├── post_processing/                # Stage 2 — order, neighbors, clade extraction, phyletic map
-│   ├── pipeline_benchmarking/          # Stage 3 — QC: automated gene calls vs. manually curated Table S1
-│   ├── flagella_based_phylogeny/       # Stage 4 — taxon phylogeny + bootstrap/TBE branch support
-│   ├── gtdb_topology_comparison/       # Stage 5 — topology comparison vs. GTDB reference tree
-│   └── ancestral_state_reconstruction/ # Stage 6 — PastML ancestral state reconstruction
-├── external_data/                      # you create this — see "Data on Zenodo" below (not tracked)
-└── LICENSE
-```
-
-All analysis scripts and folder-level documentation live under `code_and_data/`. Each stage has its own **README** with inputs, outputs, and run instructions.
-
-## Workflow (in order)
-
-The pipeline runs in six stages, one per folder. `post_processing/` is a single stage made of four internal steps, which its README numbers Step 1 to Step 4.
-
-1. **Homolog search** (`homolog_search_pipeline/`) — HMMER or MMseqs2 against GTDB, then FAMSA alignment, trimAl trimming, and FastTree gene trees.
-2. **Post-processing** (`post_processing/`) — Score-ordered trees and alignments (Step 1), genomic neighbor plots (Step 2), manual homolog clade extraction (Step 3), and the phyletic-distribution table (Step 4).
-3. **Pipeline benchmarking** (`pipeline_benchmarking/`) — Check the quality of the sequences the pipeline identified, by benchmarking the large-scale automated annotation from Stage 2 against a manually curated reference set (Table S1, 251 representative genomes) and reporting per-gene true-positive rates at ID and genome level.
-4. **Flagella-based phylogeny** (`flagella_based_phylogeny/`) — Aggregate per-gene ortholog trees into a taxon-level distance matrix and neighbor-joining tree; add bootstrap/TBE branch support.
-5. **GTDB topology comparison** (`gtdb_topology_comparison/`) — Compare the resulting phylogeny's topology against the GTDB reference tree.
-6. **Ancestral state reconstruction** (`ancestral_state_reconstruction/`) — Run PastML on three reconstructions (the GTDB genome tree directly, and order- and family-level hybrid trees grafting GTDB genome resolution onto the flagella-based backbone) to infer ancestral gene presence/absence.
-
-Stage 3 validates Stage 2's output rather than transforming it, so Stages 4 to 6 read the same table whether or not it has been run. Rerun it any time the automated table changes.
-
-## Where to read more
-
-| Folder | What its README covers |
-|---|---|
-| [homolog_search_pipeline](code_and_data/homolog_search_pipeline/README.md) | HMM/MMseqs2 search, `input_sequences/`, SLURM scripts, software versions |
-| [post_processing](code_and_data/post_processing/README.md) | Tree/FASTA ordering, neighbor plots, ortholog extraction, phyletic distribution |
-| [pipeline_benchmarking](code_and_data/pipeline_benchmarking/README.md) | Table S1 parsing, ID-level/genome-level TPR benchmarking of the automated gene table, and secondary-search ID gain |
-| [flagella_based_phylogeny](code_and_data/flagella_based_phylogeny/README.md) | Taxon distance matrix, paper analysis settings, `orthologous_trees/`, gene-resampling bootstrap and TBE branch support |
-| [gtdb_topology_comparison](code_and_data/gtdb_topology_comparison/README.md) | Topology comparison against GTDB at order/class/family/phylum rank |
-| [ancestral_state_reconstruction](code_and_data/ancestral_state_reconstruction/README.md) | PastML ancestral state reconstruction across 3 trees (genome-level, order- and family-level hybrid) |
-
-Read them in stage order, 1 to 6.
-
-## Data on Zenodo
-
-This GitHub repository holds **scripts**, **HMM/FASTA query inputs** under `homolog_search_pipeline/input_sequences/`, the **ortholog trees** in `flagella_based_phylogeny/orthologous_trees/`, and every stage's **published outputs**, including the full PastML results in `ancestral_state_reconstruction/outputs/`.
-
-The bulk data the scripts read is too large to track here and is archived on **Zenodo**:
-
-**[Zenodo record](https://zenodo.org/PLACEHOLDER)** *(link to be added)*
-
-### Set it up once
-
-Every script reads bulk data from one folder, **`external_data/`** at the root of this repository. Create it, put the files below in it, and no script needs editing:
+## Quick start
 
 ```bash
-mkdir external_data
+git clone https://github.com/Jouline-Lab/LBCA_Flagellum
+cd LBCA_Flagellum
+pip install -r requirements.txt
+mkdir external_data          # put the Zenodo files here, see "Data" below
 ```
 
-To keep the data somewhere else (a scratch volume, a shared drive), set the `LBCA_DATA_DIR` environment variable to that path instead and skip the folder:
+Most results can be rerun on a laptop from this repository plus the Zenodo table `flagellar_genes_phyletic_distribution.tsv`. Only the homolog search and PastML need a cluster.
+
+| Stage | Folder | Needs |
+|---|---|---|
+| 1. Homolog search | [`homolog_search_pipeline/`](code_and_data/homolog_search_pipeline/README.md) | GTDB r214 protein database, HMMER, MMseqs2, FAMSA, trimAl, FastTree, a SLURM cluster |
+| 2. Post-processing (ordering, neighbors, clade extraction, phyletic table) | [`post_processing/`](code_and_data/post_processing/README.md) | `pipeline_files_per_gene.zip` from Zenodo, GTDB metadata |
+| 3. Benchmark against the curated set (Table S2) | [`pipeline_benchmarking/`](code_and_data/pipeline_benchmarking/README.md) | Zenodo phyletic table, network access to NCBI |
+| 4. Flagella-based phylogeny with bootstrap and TBE support | [`flagella_based_phylogeny/`](code_and_data/flagella_based_phylogeny/README.md) | Zenodo phyletic table |
+| 5. Topology comparison with GTDB (Table S3) | [`gtdb_topology_comparison/`](code_and_data/gtdb_topology_comparison/README.md) | GTDB r214 tree, R |
+| 6. Ancestral state reconstruction (Table S4, Fig. 4b) | [`ancestral_state_reconstruction/`](code_and_data/ancestral_state_reconstruction/README.md) | Zenodo phyletic table, GTDB r214 tree, PastML on a cluster (about 3 days) |
+
+Each stage writes its results into its own folder, and every published output is already tracked there, so any stage can be checked or rerun on its own. Stage 3 checks Stage 2's table and does not change it.
+
+## Where each figure and table comes from
+
+| Item | Source |
+|---|---|
+| Fig. S1 | Stages 1-2. Interactive view of every orthologous group on [FlagellaDB](https://www.flagelladb.org/transparency/orthologous-groups?group=FliI). FliI example files in `post_processing/Figure_S1_FliI/` |
+| Fig. 3, Fig. S2 | FlagellaDB [gene co-presence tool](https://www.flagelladb.org/gene-correlation), from the Stage 2 phyletic table |
+| Fig. 4a | FlagellaDB [phyletic distribution tool](https://www.flagelladb.org/phyletic-distribution-visualization), on the Stage 4 family tree (`flagella_based_phylogeny/outputs/*_family_*_TBE.nwk`) |
+| Fig. 4b, Table S4 | Stage 6: `ancestral_state_reconstruction/figure4b_ancestral_heatmap.html`, `outputs/ancestral_call_summary.csv` |
+| Fig. 5 | FlagellaDB tools, from the Stage 2 phyletic table and the 50 ancestral groups of Stage 6 |
+| Fig. S4 | Stage 6: `ancestral_state_reconstruction/ancestral_flagella_matrix_editor.html` |
+| Table S1 | Manually curated set, `pipeline_benchmarking/data/Table_S1.xlsx` |
+| Table S2 | Stage 3: `pipeline_benchmarking/TPR_benchmark_supplementary_table.xlsx` |
+| Table S3 | Stage 5: `gtdb_topology_comparison/output/` |
+
+## Data
+
+Scripts read large inputs from one folder, `external_data/` at the repository root (git-ignored). To keep the data elsewhere, set `LBCA_DATA_DIR` to that folder instead:
 
 ```bash
 export LBCA_DATA_DIR=/scratch/lbca_data      # Linux/macOS
 $env:LBCA_DATA_DIR = "D:\lbca_data"          # PowerShell
 ```
 
-### What goes in it
-
 | File in `external_data/` | Source | Used by |
 |---|---|---|
 | `flagellar_genes_phyletic_distribution.tsv` | Zenodo | Stages 3, 4 and 6 |
-| `flagellar_genes_homologs.tsv` | Zenodo | Stage 2, Step 4 (`map_phyletic_distribution.py`) |
+| `flagellar_genes_homologs.tsv` | Zenodo | Stage 2, Step 4 |
 | `flagellar_id_conversion.txt` | Zenodo | Stage 2, Step 4 |
 | `assembly_genome_mapping.tsv` | Zenodo, inside `assembly_genome_mapping.zip` | Stage 2, Step 4 |
-| `pipeline_files_per_gene/<Gene>/…` | Zenodo, unzip `pipeline_files_per_gene.zip` | Stages 1 and 2 |
+| `pipeline_files_per_gene/<Gene>/…` | Zenodo, unzip `pipeline_files_per_gene.zip` and gunzip the `.gz` files inside | Stages 1 and 2 |
 | `bac120_r214.tree` | [FlagellaDB](https://raw.githubusercontent.com/Jouline-Lab/FlagellaDB/main/public/bac120_r214.tree) | Stages 5 and 6 |
-| `GTDB214_lineage_ordered.json` | [FlagellaDB](https://raw.githubusercontent.com/Jouline-Lab/FlagellaDB/main/public/GTDB214_lineage_ordered.json) | Stage 4, for phylum-decorated tip labels |
+| `GTDB214_lineage_ordered.json` | [FlagellaDB](https://raw.githubusercontent.com/Jouline-Lab/FlagellaDB/main/public/GTDB214_lineage_ordered.json), downloaded automatically by Stage 4 | Stage 4 |
 | `bac120_metadata_r214.tsv` | GTDB, inside [bac120_metadata_r214.tar.gz](https://data.ace.uq.edu.au/public/gtdb/data/releases/release214/214.0/bac120_metadata_r214.tar.gz) | Stage 2, Step 4 |
 
-**Decompress everything.** The scripts read plain files: unzip the two `.zip` archives, extract the GTDB `.tar.gz`, and gunzip the `.fasta.gz` / `.txt.gz` / `.m8.gz` files inside `pipeline_files_per_gene/`.
+Stage 2 also writes into this folder: `ortholog_lists/` (Step 3) and `output/` (Step 4).
 
-The scripts also write into this folder: `ortholog_lists/` (Stage 2, Step 3 output) and `output/` (Stage 2, Step 4 output). If you rerun the homolog search yourself, its per-gene results go to `pipeline_files_per_gene/` too, in the same layout as the Zenodo archive.
+This repository itself holds the scripts, the HMM and FASTA queries (`homolog_search_pipeline/input_sequences/`), the curated ortholog trees (`flagella_based_phylogeny/orthologous_trees/`) and the outputs of every stage, including the full PastML results. Zenodo also holds copies of the ortholog trees and the flagella-based trees.
 
-`external_data/` is git-ignored, so nothing you download or generate there will be committed by accident.
+## Requirements
 
-## Notes
+- Python 3.9 or later with the packages in `requirements.txt` (`pandas`, `numpy`, `ete3`, `biopython`, `plotly`, `matplotlib`, `openpyxl`)
+- R with `ape`, `phangorn` and `TreeDist` (Stage 5)
+- On a cluster: HMMER 3.3.2/3.4, MMseqs2, FAMSA 2.2.2, trimAl 1.4, FastTree 2.1.11 (Stage 1), `pastml` (Stage 6)
 
-- No script contains a machine-specific path. The only values you may need to edit are cluster-specific ones in the SLURM scripts: the GTDB protein database, the FAMSA/trimAl/FastTree binaries, and your Python virtualenv.
-- If a file is not in GitHub, check the Zenodo archive or regenerate it with the homolog-search scripts.
+Cluster scripts are SLURM batch scripts. Before submitting one, set the paths in its `USER CONFIGURATION` block and the `#SBATCH --account` line.
+
+## Citation
+
+If you use this code or data, please cite the article and the Zenodo dataset (https://doi.org/10.5281/zenodo.22266385).
+
+## License
+
+MIT, see [LICENSE](LICENSE).

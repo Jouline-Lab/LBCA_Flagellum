@@ -1,8 +1,6 @@
 # Stage 2 - Post-processing
 
-Full search results, MSAs, mapping files, and the phyletic-distribution TSV are on [Zenodo](../../README.md#data-on-zenodo) (link to be added). This folder contains the scripts to run on those files.
-
-Homolog searches that feed this stage produce alignments with **FAMSA v2.2.2** (default settings), column trimming with **trimAl v1.4** (`-gt 0.1`, removing columns with more than 90% gaps), and gene trees with **FastTree v2.1.11** (OpenMP build `FastTreeMP`; see `homolog_search_pipeline/README.md`).
+Turns the per-gene search results of Stage 1 into curated orthologous groups and the phyletic-distribution table. The search results, MSAs and mapping files are on Zenodo (see the root README, "Data"). Steps 1-3 can be skipped by using `flagellar_genes_homologs.tsv` from Zenodo, and Step 4 can be skipped by using `flagellar_genes_phyletic_distribution.tsv`.
 
 ## Step 1 — Order Trees and FASTAs by Search Score
 
@@ -85,7 +83,7 @@ Under `BASE_DIR`, each gene has its own directory (`BASE_DIR/<gene>/`). The scri
 | `<gene>_db_FAMSA_gt0.1_treeordered.fasta` | Tree-ordered MSA for m8-based genes (regular alignment). |
 | `<gene>_hmm_E1000_db_hmmregions_FAMSA_gt0.1_treeordered.fasta` | Tree-ordered hmmregions MSA (HMM genes only). |
 
-Neighbor logic is unchanged from the previous workflow: for each gene pair, hits are grouped by genome/contig and strand, sorted by genomic coordinate, and a sequence is marked as having a neighbor if the partner gene is immediately before or after it within `DISTANCE_THRESHOLD` (base pairs). The plot uses tree-ordered FASTA leaf order on the x-axis, bins sequences with `WINDOW_SIZE`, and sums neighboring hits per bin; separate lines are drawn for different partner genes. These plots are also used in Step 3 to help identify which tree regions are associated with nearby flagellar genes.
+For each gene pair, hits are grouped by genome/contig and strand, sorted by genomic coordinate, and a sequence is marked as having a neighbor if the partner gene is immediately before or after it within `DISTANCE_THRESHOLD` (base pairs). The plot follows the tree-ordered FASTA on the x-axis, groups sequences into windows of `WINDOW_SIZE` consecutive sequences, and shows how many sequences in each window have that neighbor, one line per partner gene. These plots are also used in Step 3 to help identify which tree regions are associated with nearby flagellar genes.
 
 ### Configuration (`neighbors_treeorder.py`)
 
@@ -95,9 +93,9 @@ Set at the top of `neighbors_treeorder.py`.
 |---|---|
 | `BASE_DIR` | Root folder; each gene is processed in `BASE_DIR/<gene>/`. Defaults to `external_data/pipeline_files_per_gene/` (see the root README, "Data on Zenodo"); set `LBCA_DATA_DIR` to read it from elsewhere. |
 | `DISTANCE_THRESHOLD` | Maximum distance (bp) between genes to count as neighbors (default `500`). |
-| `WINDOW_SIZE` | Number of MSA positions per x-axis bin (default `50`). |
+| `WINDOW_SIZE` | Number of consecutive sequences, in tree order, per window (default `50`). |
 | `SEQ_LIMIT` | Maximum hits read per HMM/m8 file (default `100000`). |
-| `GENE_NAMES` | List of flagellar genes to test as neighbors of the focal gene. |
+| `GENE_NAMES` | Search folders to test as neighbors of the focal gene (FapA is listed under its search name, `DUF342`). |
 
 ### Outputs
 
@@ -141,7 +139,7 @@ Set in the `USER CONFIGURATION` block.
 
 Both default to the repository's `external_data/` folder (see the root README, "Data on Zenodo"); set `LBCA_DATA_DIR` to use a different location.
 
-A gene searched under a name other than the one used downstream carries a `search_name` key in its `gene_boundaries` entry: inputs are read under the search name, every output is written under the gene name. `FapA` is the one case, searched as its Pfam domain `DUF342`. A few trees were manually rerooted before their clade boundaries were read, because the automated outgroup rooting placed the root inaccurately; those copies are tracked in `rerooted_trees/` and referenced directly.
+A gene searched under a name other than the one used downstream carries a `search_name` key in its `gene_boundaries` entry: inputs are read under the search name, every output is written under the gene name. `FapA` is the one case, searched as its Pfam domain `DUF342`. A few trees were manually rerooted before their clade boundaries were read, because the automated outgroup rooting placed the root inaccurately; those copies are tracked in `rerooted_trees/` and referenced directly. These are the SwrB tree (`SwrB_db_FAMSA_gt0.1_m8ordered_rerooted.tree`) and the FliO matched-region tree (`FliO_hmm_E1000_db_hmmregions_FAMSA_gt0.1_hmmordered_rerooted.tree`). On the FliO tree as rooted in `pipeline_files_per_gene.zip`, the FliO boundary pair spans nearly the whole tree (49,589 of 49,590 leaves) instead of the 30,502 orthologs. A rerooted HMM tree also replaces its search-results copy when the ortholog trees are pruned, so the FliO ortholog tree keeps the corrected root.
 
 ### Outputs
 
@@ -207,18 +205,10 @@ All six default to the repository's `external_data/` folder (see the root README
 1. Place the Zenodo and GTDB files as described in the root README.
 2. Run the script end-to-end, or step through the `#%%` cells in order.
 
-## Figure S1 — FliI pipeline demonstration
+## Figure S1 — FliI example
 
 Folder: [`Figure_S1_FliI/`](Figure_S1_FliI/README.md)
 
-A self-contained HTML figure that walks through Steps 1 to 3 for one example
-gene, FliI, showing all four signals on one shared x-axis (leaf order in the
-HMM-score-ordered gene tree): the tree-ordered MSA, the HMM score and search-rank
-index from Step 1, the top 5 neighboring-gene signals from Step 2, and the gene
-tree itself, with the clade finally retained in Step 3 highlighted across every
-track. It is the visual answer to "how was each ortholog set actually chosen".
+Fig. S1 shows Steps 1-3 for FliI on one shared x-axis, the leaf order of the score-ordered gene tree: the neighbor plot (Step 2), the tree-ordered MSA and the search score and rank index (Step 1), and the tree, with the clade kept in Step 3 shaded across all tracks. The same view for every orthologous group and alternative search is on FlagellaDB, https://www.flagelladb.org/transparency/orthologous-groups?group=FliI, built by `scripts/build-orthologous-groups-data.py` in the [FlagellaDB repository](https://github.com/Jouline-Lab/FlagellaDB). The figure is the SVG export of that page for FliI.
 
-FliI's five source files are small enough to track, so they are committed under
-`Figure_S1_FliI/data/` and the figure rebuilds from a plain checkout with nothing
-to download. See that folder's README for the track-by-track description and how
-to rebuild it.
+FliI's five source files are tracked in `Figure_S1_FliI/data/` as one complete example that needs no download.

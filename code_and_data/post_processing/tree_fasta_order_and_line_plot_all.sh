@@ -8,7 +8,7 @@
 #SBATCH --nodes=1
 #SBATCH --output=%j_tree_fasta_order_and_lineplot.out
 #SBATCH --time=0-4:0:0
-#SBATCH --account=PAS1794
+#SBATCH --account=YOUR_ACCOUNT
 #SBATCH --array=0-2
 
 set -euo pipefail

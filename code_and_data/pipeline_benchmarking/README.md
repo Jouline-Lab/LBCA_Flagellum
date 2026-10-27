@@ -18,12 +18,18 @@ The table it reads comes from Zenodo; place it in the repository's
 `external_data/` folder as the root README describes.
 
 Top-level files are the results: the final numbers (`benchmark_final_summary.csv`),
-the plot that backs them (`tpr_boxplot_id_corrected.html`), and the per-gene
-detail behind that plot (`gene_benchmark_metrics_id_corrected*.csv`). Step 2's
-raw, uncorrected outputs and Step 3's per-id NCBI evidence are audit trail,
-not results, so they live in `quality_check_and_filtering/` — kept for
-provenance and for defending the corrected numbers if asked, not meant to be
-the first thing anyone opens.
+the plot (`tpr_boxplot_id_corrected.html`), the per-gene values behind it
+(`gene_benchmark_metrics_id_corrected*.csv`) and Table S2
+(`TPR_benchmark_supplementary_table.xlsx`). Step 2's uncorrected outputs and
+Step 3's per-ID NCBI records are in `quality_check_and_filtering/`.
+
+## How to run
+
+```bash
+python parse_table_s1.py
+python benchmark_against_automated_table.py
+python ncbi_id_status_check.py      # needs network access to NCBI
+```
 
 ## Step 1 — Parse Table S1
 
@@ -63,8 +69,7 @@ python parse_table_s1.py [--input data/Table_S1.xlsx] [--output Table_S1_parsed.
 Script: `benchmark_against_automated_table.py`
 
 For each gene, restricted to genome assemblies shared by both tables,
-computes two true-positive-rate metrics at different granularities
-(FNR is not reported separately — it's exactly 1 − TPR and adds nothing):
+computes two true-positive-rate metrics at different granularities:
 
 - **ID-level TPR** — pools every individual protein/gene ID each table
   reports and compares the pools directly: `TP` = IDs found in both,
@@ -86,9 +91,8 @@ Genes in Table S1 with no matching column in the automated table are
 excluded from both metrics and reported separately (see the script's
 docstring for the full matching rules).
 
-The same run also computes the mirror comparison — the automated table as
-reference, Table S1 as the thing being checked against it — from the same
-loaded/matched data (no separate script or re-parse needed). TP is the same
+The same run also computes the mirror comparison, with the automated table as
+reference and Table S1 checked against it. TP is the same
 S1/automated intersection either way; only the denominator flips, so this
 answers "of what the automated table called, how much does Table S1
 confirm" rather than "how much of Table S1 did the automated table
@@ -106,8 +110,7 @@ out.
 
 ### Outputs
 
-All written to `quality_check_and_filtering/` — raw/uncorrected, superseded
-by Step 3's corrected metrics below (see the folder-layout note above).
+All written to `quality_check_and_filtering/`. Step 3 corrects these numbers.
 
 | Path | Contents |
 |---|---|

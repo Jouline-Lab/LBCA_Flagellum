@@ -106,7 +106,13 @@ ORTHOLOG_OUT_DIR = os.path.join(DATA_DIR, "ortholog_lists")
 
 # A few trees were manually rerooted before clade boundaries were read off them,
 # because the automated outgroup rooting placed the root inaccurately. Those
-# rerooted copies are tracked here rather than coming from the search results.
+# rerooted copies are tracked here rather than coming from the search results:
+#   SwrB  SwrB_db_FAMSA_gt0.1_m8ordered_rerooted.tree
+#   FliO  FliO_hmm_E1000_db_hmmregions_FAMSA_gt0.1_hmmordered_rerooted.tree
+# On the FliO tree as rooted in the search results, the boundary pair spans
+# nearly the whole tree (49,589 of 49,590 leaves) instead of the 30,502 orthologs.
+# A rerooted HMM tree also replaces its search-results copy when the ortholog
+# trees are pruned below, so the pruned tree keeps the corrected root.
 REROOTED_TREE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rerooted_trees")
 
 
@@ -133,81 +139,83 @@ def derive_m8_ortholog_tree_path(gene_name, tree_file, out_dir):
 
 #%% Gene boundaries
 gene_boundaries = {
-    "CsrA": {"boundary": [["NZ_CP018846.1_3238", "JAGBIB010000205.1_6"]], "hmmregion": 1}, # Done
-    "FlaG": {"boundary": [["CAKRAK010000006.1_63","NZ_LR884459.1_835"]], "hmmregion": 0}, # Done
-    "FlgA": {"boundary": [["NZ_FMWO01000048.1_100", "PLHP01000069.1_11"]], "hmmregion": 0}, # Done
-    "FlgB": {"boundary": [["NZ_SMCO01000001.1_696", "JAABRT010000039.1_14"]], "hmmregion": 0}, # Done
-    "FlgC": {"boundary": [["NZ_QJKC01000011.1_38", "WQVC01000133.1_2"]], "hmmregion": 0}, # Done
-    "FlgD": {"boundary": [["NZ_JRUD01000022.1_3", "JAGDWZ010000024.1_35"]], "hmmregion": 1}, # Done
-    "FlgE": {"boundary": [["NZ_LXUF01000016.1_129", "DZAY01000028.1_17"]], "hmmregion": 0}, # Done
-    "FlgF": {"boundary": [["NZ_SNWX01000003.1_162", "SHAP01000004.1_89"]], "hmmregion": 0}, # Done
-    "FlgG": {"boundary": [["JAAZZB010000056.1_7","JACRGQ010000032.1_11"]],"hmmregion": 0}, # Done
-    "FlgH": {"boundary": [["NZ_KE384096.1_251", "LMZT01000109.1_25"],["NZ_CP029161.1_246","NZ_CP034852.1_251"]], "hmmregion": 0}, # Done
-    "FlgI": {"boundary": [["JAGXAQ010000001.1_246", "JAHBXO010000001.1_195"]], "hmmregion": 0}, # Done
-    "FlgJ": {"boundary": [["NZ_CM001773.1_1530","VGJY01000006.1_37"]] , "hmmregion": 0}, # Done
-    "FlgK": {"boundary": [["NZ_LT984884.1_1377", "NZ_LFLZ01000002.1_179"]], "hmmregion": 0}, # Done
-    "FlgL": {"boundary": [["JAENYK010000004.1_230","JABSOS010000006.1_147"]], "hmmregion": 0}, # Done
-    "FlgM": {"boundary": [["AP019373.1_619", "JAFMML010000021.1_46"]], "hmmregion": 1}, # Done
-    "FlgO": {"boundary": [["JABSRV010000072.1_8", "CAMDPZ010000038.1_12"]], "hmmregion": 0}, # Done
-    "FlgP": {"boundary": [["NZ_LFLS01000069.1_1", "CP071184.1_532"]], "hmmregion": 1}, # Done
+    "CsrA": {"boundary": [["NZ_CP018846.1_3238", "JAGBIB010000205.1_6"]], "hmmregion": 1},
+    "FlaG": {"boundary": [["CAKRAK010000006.1_63","NZ_LR884459.1_835"]], "hmmregion": 0},
+    "FlgA": {"boundary": [["NZ_FMWO01000048.1_100", "PLHP01000069.1_11"]], "hmmregion": 0},
+    "FlgB": {"boundary": [["NZ_SMCO01000001.1_696", "JAABRT010000039.1_14"]], "hmmregion": 0},
+    "FlgC": {"boundary": [["NZ_QJKC01000011.1_38", "WQVC01000133.1_2"]], "hmmregion": 0},
+    "FlgD": {"boundary": [["NZ_JRUD01000022.1_3", "JAGDWZ010000024.1_35"]], "hmmregion": 1},
+    "FlgE": {"boundary": [["NZ_LXUF01000016.1_129", "DZAY01000028.1_17"]], "hmmregion": 0},
+    "FlgF": {"boundary": [["NZ_SNWX01000003.1_162", "SHAP01000004.1_89"]], "hmmregion": 0},
+    "FlgG": {"boundary": [["JAAZZB010000056.1_7","JACRGQ010000032.1_11"]],"hmmregion": 0},
+    "FlgH": {"boundary": [["NZ_KE384096.1_251", "LMZT01000109.1_25"],["NZ_CP029161.1_246","NZ_CP034852.1_251"]], "hmmregion": 0},
+    "FlgI": {"boundary": [["JAGXAQ010000001.1_246", "JAHBXO010000001.1_195"]], "hmmregion": 0},
+    "FlgJ": {"boundary": [["NZ_CM001773.1_1530","VGJY01000006.1_37"]] , "hmmregion": 0},
+    "FlgK": {"boundary": [["NZ_LT984884.1_1377", "NZ_LFLZ01000002.1_179"]], "hmmregion": 0},
+    "FlgL": {"boundary": [["JAENYK010000004.1_230","JABSOS010000006.1_147"]], "hmmregion": 0},
+    "FlgM": {"boundary": [["AP019373.1_619", "JAFMML010000021.1_46"]], "hmmregion": 1},
+    "FlgO": {"boundary": [["JABSRV010000072.1_8", "CAMDPZ010000038.1_12"]], "hmmregion": 0},
+    "FlgP": {"boundary": [["NZ_LFLS01000069.1_1", "CP071184.1_532"]], "hmmregion": 1},
     "FlgT": {"boundary": [["NZ_WOBR01000004.1_5", "JAFGUH010000219.1_18"],["JAGOXX010000126.1_1","DRBZ01000012.1_5"]], "hmmregion": 1},
-    "FlgQ": {"boundary": [["NZ_CP043427.1_1608", "DQOT01000262.1_1"]], "hmmregion": 0}, # Done
-    "FlhA": {"boundary": [["VFJK01000130.1_22", "JAAZXR010000010.1_48"]], "hmmregion": 0}, # Done
-    "FlhB": {"boundary": [["JADGAT010000004.1_80", "PWFS01000245.1_3"]], "hmmregion": 0}, # Done
-    "FlhC": {"boundary": [["NZ_CADCXY010000003.1_57", "JABTUS010000012.1_13"]], "hmmregion": 0}, # Done
-    "FlhD": {"boundary": [["NZ_FCOP01000013.1_300", "DVOQ01000054.1_2"], ["DBVL01000089.1_7", "NZ_MCAS01000001.1_498"], 
-                          ["NZ_CP026111.1_3023", "NZ_QKOB01000016.1_19"]], "hmmregion": 1}, # Done
-    "FlhE": {"boundary": [["NZ_PUJU01000006.1_43", "NZ_LYRP01000001.1_468"], 
-                          ["NZ_AQWM01000013.1_60", "NZ_LFLS01000010.1_141"]], "hmmregion": 0}, #Done
-    "FlhF": {"boundary": [["JAFIFN010000118.1_1", "DCTH01000103.1_6"]], "hmmregion": 0}, # Done
-    "FlhG": {"boundary": [["NZ_CP074572.1_695", "NZ_CP036289.1_1414"]], "hmmregion": 1}, # Done
-    "FliA": {"boundary": [[ "NZ_PVNH01000004.1_217","JACQDB010000019.1_3"]], "hmmregion": 0}, # Done
-    "FliC": {"boundary": [["JABTUQ010000007.1_105", "NZ_NPEV01000072.1_21"]], "hmmregion": 1}, # Done
+    "FlgQ": {"boundary": [["NZ_CP043427.1_1608", "DQOT01000262.1_1"]], "hmmregion": 0},
+    "FlhA": {"boundary": [["VFJK01000130.1_22", "JAAZXR010000010.1_48"]], "hmmregion": 0},
+    "FlhB": {"boundary": [["JADGAT010000004.1_80", "PWFS01000245.1_3"]], "hmmregion": 0},
+    "FlhC": {"boundary": [["NZ_CADCXY010000003.1_57", "JABTUS010000012.1_13"]], "hmmregion": 0},
+    "FlhD": {"boundary": [["NZ_FCOP01000013.1_300", "DVOQ01000054.1_2"], ["DBVL01000089.1_7", "NZ_MCAS01000001.1_498"],
+                          ["NZ_CP026111.1_3023", "NZ_QKOB01000016.1_19"]], "hmmregion": 1},
+    "FlhE": {"boundary": [["NZ_PUJU01000006.1_43", "NZ_LYRP01000001.1_468"],
+                          ["NZ_AQWM01000013.1_60", "NZ_LFLS01000010.1_141"]], "hmmregion": 0},
+    "FlhF": {"boundary": [["JAFIFN010000118.1_1", "DCTH01000103.1_6"]], "hmmregion": 0},
+    "FlhG": {"boundary": [["NZ_CP074572.1_695", "NZ_CP036289.1_1414"]], "hmmregion": 1},
+    "FliA": {"boundary": [[ "NZ_PVNH01000004.1_217","JACQDB010000019.1_3"]], "hmmregion": 0},
+    "FliC": {"boundary": [["JABTUQ010000007.1_105", "NZ_NPEV01000072.1_21"]], "hmmregion": 1},
     "FliD": {"boundary": [["VGJQ01000016.1_9", "NZ_RQYL01000006.1_16"],["JAKAVV010000005.1_147","JAJFBP010000037.1_1"],
-                          ["CP070841.1_1245","NZ_FOJI01000003.1_297"]], "hmmregion": 0}, # Done
-    "FliE": {"boundary": [["NZ_JACHWY010000001.1_598","NZ_NCXP01000045.1_13"]], "hmmregion": 0}, # Done
-    "FliF": {"boundary": [["KI928935.1_128", "NZ_NFMA01000022.1_40"], ["JALNZK010000024.1_7", "NZ_CP020612.1_2605"]], "hmmregion": 0}, # Done
-    "FliG": {"boundary": [["QMQA01000039.1_3","WGDQ01000488.1_4"]], "hmmregion": 0}, # Done
-    "FliH": {"boundary": [["NZ_KB905155.1_716", "NZ_NNRM01000020.1_27"]], "hmmregion": 1}, # Done
-    "FliI": {"boundary": [["NZ_CP014839.1_3861","NZ_JAMXSR010000002.1_3082" ]], "hmmregion": 0}, # Done 
-    "FliJ": {"boundary": [["NZ_CP017705.1_377", "JADLDL010000282.1_8"]], "hmmregion": 1}, # Done
+                          ["CP070841.1_1245","NZ_FOJI01000003.1_297"]], "hmmregion": 0},
+    "FliE": {"boundary": [["NZ_JACHWY010000001.1_598","NZ_NCXP01000045.1_13"]], "hmmregion": 0},
+    "FliF": {"boundary": [["KI928935.1_128", "NZ_NFMA01000022.1_40"], ["JALNZK010000024.1_7", "NZ_CP020612.1_2605"]], "hmmregion": 0},
+    "FliG": {"boundary": [["QMQA01000039.1_3","WGDQ01000488.1_4"]], "hmmregion": 0},
+    "FliH": {"boundary": [["NZ_KB905155.1_716", "NZ_NNRM01000020.1_27"]], "hmmregion": 1},
+    "FliI": {"boundary": [["NZ_CP014839.1_3861","NZ_JAMXSR010000002.1_3082" ]], "hmmregion": 0},
+    "FliJ": {"boundary": [["NZ_CP017705.1_377", "JADLDL010000282.1_8"]], "hmmregion": 1},
     "FliK": {"boundary": [["NZ_JACDRR010000011.1_72","SCUE01000012.1_199"],
-                          ["JAAEQF010000458.1_9","NZ_CCDG010000024.1_25"]],"hmmregion": 1}, # Done
-    "FliL": {"boundary": [["JAGOGO010000029.1_5","JALHOL010000001.1_89"]], "hmmregion": 1}, # Done
-    "FliM": {"boundary": [["WJPL01000003.1_718","NZ_RAVW01000244.1_8"]], "hmmregion": 0}, # Done
-    "FliN": {"boundary": [["DDHO01000024.1_3", "NZ_JANUCP010000003.1_99"]], "hmmregion": 1}, # Done
-    "FliO": {"boundary": [["DPKF01000115.1_9", "JAILEI010000204.1_40"]], "hmmregion": 1}, # Done
-    "FliP": {"boundary": [["PMZA01000392.1_5", "JACAED010000054.1_36"]], "hmmregion": 0}, # Done
-    "FliQ": {"boundary": [["NZ_CAJZAH010000004.1_271", "NZ_CP008852.1_2500"]], "hmmregion": 0}, # Done
-    "FliR": {"boundary": [["JAJFTF010000051.1_51", "CP022114.1_124"]], "hmmregion": 0}, # Done
-    "FliS": {"boundary": [["CADEEX010000001.1_29", "WRFW01000116.1_5"]], "hmmregion": 1}, # Done 
-    "FliW": {"boundary": [["JAGPBS010000023.1_7", "JAIUNT010000009.1_15"], ["CAKVCL010000012.1_9", "NZ_CP035928.1_1262"]], "hmmregion": 0}, # Done 
-    "FliZ": {"boundary": [["NZ_CABHYG010000009.1_70", "UGTZ01000002.1_29"]], "hmmregion": 0}, # Done 
-    "MotA": {"boundary": [["NZ_LROS01000079.1_43","WQZS01000003.1_66"], ["NZ_JQAR01000006.1_92", "JALZUD010000138.1_7"]], "hmmregion": 0},  # Done
-    "MotB": {"boundary": [["NZ_QRAP01000001.1_885", "JABDKO010000122.1_6"]], "hmmregion": 1}, # Done
-    "SwrD": {"boundary": [["NZ_LWAF01000001.1_42", "NZ_WTLI01000012.1_102"]], "hmmregion": 0}, # Done
+                          ["JAAEQF010000458.1_9","NZ_CCDG010000024.1_25"]],"hmmregion": 1},
+    "FliL": {"boundary": [["JAGOGO010000029.1_5","JALHOL010000001.1_89"]], "hmmregion": 1},
+    "FliM": {"boundary": [["WJPL01000003.1_718","NZ_RAVW01000244.1_8"]], "hmmregion": 0},
+    "FliN": {"boundary": [["DDHO01000024.1_3", "NZ_JANUCP010000003.1_99"]], "hmmregion": 1},
+    "FliO": {"boundary": [["DPKF01000115.1_9", "JAILEI010000204.1_40"]], "hmmregion": 1,
+             "tree": os.path.join(REROOTED_TREE_DIR, "FliO_hmm_E1000_db_hmmregions_FAMSA_gt0.1_hmmordered_rerooted.tree"),
+             "fasta": gene_file("FliO", "FliO_hmm_E1000_db_hmmregions_FAMSA_gt0.1_treeordered.fasta")},
+    "FliP": {"boundary": [["PMZA01000392.1_5", "JACAED010000054.1_36"]], "hmmregion": 0},
+    "FliQ": {"boundary": [["NZ_CAJZAH010000004.1_271", "NZ_CP008852.1_2500"]], "hmmregion": 0},
+    "FliR": {"boundary": [["JAJFTF010000051.1_51", "CP022114.1_124"]], "hmmregion": 0},
+    "FliS": {"boundary": [["CADEEX010000001.1_29", "WRFW01000116.1_5"]], "hmmregion": 1},
+    "FliW": {"boundary": [["JAGPBS010000023.1_7", "JAIUNT010000009.1_15"], ["CAKVCL010000012.1_9", "NZ_CP035928.1_1262"]], "hmmregion": 0},
+    "FliZ": {"boundary": [["NZ_CABHYG010000009.1_70", "UGTZ01000002.1_29"]], "hmmregion": 0},
+    "MotA": {"boundary": [["NZ_LROS01000079.1_43","WQZS01000003.1_66"], ["NZ_JQAR01000006.1_92", "JALZUD010000138.1_7"]], "hmmregion": 0},
+    "MotB": {"boundary": [["NZ_QRAP01000001.1_885", "JABDKO010000122.1_6"]], "hmmregion": 1},
+    "SwrD": {"boundary": [["NZ_LWAF01000001.1_42", "NZ_WTLI01000012.1_102"]], "hmmregion": 0},
     "FlgN": {"boundary": [["NC_014121.1_3232","JAAOMR010000134.1_46"],["PWLT01000094.1_3","CAJJBF010000012.1_15"],["JAAEMS010000170.1_50","JAHDQN010000020.1_199"]],
-             "hmmregion": 1}, # Done
-    "FliT": {"boundary": [["JAMDYG010000001.1_1082","NZ_LHOX01000021.1_174"]],"hmmregion":1}, # Done
-    "FlbT": {"boundary": [["NZ_VHLH01000025.1_23","NZ_NHSK01000154.1_13"]], "hmmregion": 1}, # Done
-    "FlaF": {"boundary": [["NZ_RJRZ01000020.1_48","QHBU01000122.1_3"]],"hmmregion": 0}, # Done
-    "Putative": {"boundary": [["JALOAD010000056.1_9","DIVV01000130.1_6"]],"hmmregion":0}, #Done
-    "PilZ": {"boundary": [["NZ_MSLT01000023.1_561","JAAYCS010000158.1_25"]],"hmmregion":0}, #Done
-    "MotE": {"boundary": [["NZ_AP024401.1_284","NZ_FRAU01000010.1_67"],["JAEYOK010000016.1_113","JAILQQ010000206.1_11"],["CAMAQH010000001.1_43","JACPIN010000018.1_13"]],"hmmregion":0}, #Done
-    "MotY": {"boundary": [["NZ_KB822603.1_18","CAIRAY010000119.1_4"]],"hmmregion":0}, #Done
+             "hmmregion": 1},
+    "FliT": {"boundary": [["JAMDYG010000001.1_1082","NZ_LHOX01000021.1_174"]],"hmmregion":1},
+    "FlbT": {"boundary": [["NZ_VHLH01000025.1_23","NZ_NHSK01000154.1_13"]], "hmmregion": 1},
+    "FlaF": {"boundary": [["NZ_RJRZ01000020.1_48","QHBU01000122.1_3"]],"hmmregion": 0},
+    "Putative": {"boundary": [["JALOAD010000056.1_9","DIVV01000130.1_6"]],"hmmregion":0},
+    "PilZ": {"boundary": [["NZ_MSLT01000023.1_561","JAAYCS010000158.1_25"]],"hmmregion":0},
+    "MotE": {"boundary": [["NZ_AP024401.1_284","NZ_FRAU01000010.1_67"],["JAEYOK010000016.1_113","JAILQQ010000206.1_11"],["CAMAQH010000001.1_43","JACPIN010000018.1_13"]],"hmmregion":0},
+    "MotY": {"boundary": [["NZ_KB822603.1_18","CAIRAY010000119.1_4"]],"hmmregion":0},
     "SwrB": {"boundary": [["JAFLRU010000043.1_11","NZ_CP048020.1_146"]],"hmmregion":0,
              "tree": os.path.join(REROOTED_TREE_DIR, "SwrB_db_FAMSA_gt0.1_m8ordered_rerooted.tree"),
-             "fasta": gene_file("SwrB", "SwrB_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
+             "fasta": gene_file("SwrB", "SwrB_db_FAMSA_gt0.1_treeordered.fasta")},
     "PflA": {"boundary": [["NZ_LN831025.1_1648","MAAG01000128.1_20"]],"hmmregion":0,
              "tree": gene_file("PflA", "PflA_db_FAMSA_gt0.1_m8ordered.tree"),
-             "fasta": gene_file("PflA", "PflA_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
+             "fasta": gene_file("PflA", "PflA_db_FAMSA_gt0.1_treeordered.fasta")},
     "PflB": {"boundary": [["NZ_LN831025.1_380","JAIOSF010000021.1_111"]],"hmmregion":0,
              "tree": gene_file("PflB", "PflB_db_FAMSA_gt0.1_m8ordered.tree"),
-             "fasta": gene_file("PflB", "PflB_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
+             "fasta": gene_file("PflB", "PflB_db_FAMSA_gt0.1_treeordered.fasta")},
     "MotC": {"boundary": [["NZ_JACHIK010000011.1_65","JAHDFM010000008.1_6"]],"hmmregion":0,
              "tree": gene_file("MotC", "MotC_db_FAMSA_gt0.1_m8ordered.tree"),
-             "fasta": gene_file("MotC", "MotC_db_FAMSA_gt0.1_treeordered.fasta")}, # Done
-    "FliB": {"boundary": [["CAKQYU010000002.1_226","CAKQKE010000010.1_26"]],"hmmregion":0}, #Done 
+             "fasta": gene_file("MotC", "MotC_db_FAMSA_gt0.1_treeordered.fasta")},
+    "FliB": {"boundary": [["CAKQYU010000002.1_226","CAKQKE010000010.1_26"]],"hmmregion":0},
     "MotX": {"boundary": [["AP025472.1_2530","CAAGDP010000202.1_7"]],"hmmregion":0,
                 "tree": gene_file("MotX", "MotX_db_FAMSA_gt0.1_m8ordered.tree"),
                 "fasta": gene_file("MotX", "MotX_db_FAMSA_gt0.1_treeordered.fasta")
@@ -215,8 +223,8 @@ gene_boundaries = {
     "MotK": {"boundary": [["NC_007493.2_2953","NZ_JABFCX010000003.1_989"]],"hmmregion":0,
                 "tree": gene_file("MotK", "MotK_db_FAMSA_gt0.1_m8ordered.tree"),
                 "fasta": gene_file("MotK", "MotK_db_FAMSA_gt0.1_treeordered.fasta")
-                }, #Done
-    "FlrC": {"boundary": [["NZ_BBIU01000036.1_34","QKED01000117.1_6"]],"hmmregion":0}, #Done
+                },
+    "FlrC": {"boundary": [["NZ_BBIU01000036.1_34","QKED01000117.1_6"]],"hmmregion":0},
     "FlrA": {"boundary": [["NZ_CP018616.1_1940","JAABTJ010000001.1_62"]],"hmmregion":0,
                 "tree": gene_file("FlrA", "FlrA_db_FAMSA_gt0.1_m8ordered.tree"),
                 "fasta": gene_file("FlrA", "FlrA_db_FAMSA_gt0.1_treeordered.fasta")
@@ -232,7 +240,7 @@ gene_boundaries = {
     "FlcA": {"boundary": [["NC_001318.1_316","NZ_AP024401.1_322"],["QNBN01000028.1_5","JAFGXN010000061.1_1"]],"hmmregion":0,
                 "tree": gene_file("FlcA", "FlcA_db_FAMSA_gt0.1_m8ordered.tree"),
                 "fasta": gene_file("FlcA", "FlcA_db_FAMSA_gt0.1_treeordered.fasta")
-                }, #A secondary clade that is also annoated as FlcA but it is not very similar sequence-wise
+                },  # two clades: the second is also annotated FlcA but is less similar in sequence
     "FlcB": {"boundary": [["NC_001318.1_56","JACRPF010000011.1_139"]],"hmmregion":0,
                 "tree": gene_file("FlcB", "FlcB_db_FAMSA_gt0.1_m8ordered.tree"),
                 "fasta": gene_file("FlcB", "FlcB_db_FAMSA_gt0.1_treeordered.fasta")
@@ -250,7 +258,7 @@ gene_boundaries = {
     # (ortholog FASTA/tree names, and the FapA_* columns of the phyletic
     # distribution table) uses FapA.
     "FapA": {"boundary": [["NZ_CP069213.1_501","JAFIGE010000066.1_15"]],"hmmregion":0,
-             "search_name": "DUF342"}, # second clade is MinC
+             "search_name": "DUF342"},  # the other large clade in this tree is MinC
     "DUF1217": {"boundary": [["NZ_MDET01000003.1_55","JACQAI010000194.1_6"]],"hmmregion":0},
     "DUF6470": {"boundary": [["NZ_CABKRX010000062.1_30","CP060226.1_2110"],["JAAYOS010000013.1_8","JAHHUB010000032.1_2"]], "hmmregion":0},
     "DUF327": {"boundary": [["CAJUQB010000006.1_41","JAJXUE010000021.1_9"]], "hmmregion":0},
@@ -277,10 +285,8 @@ gene_boundaries = {
     "FlgX": {"boundary": [["NZ_CP014991.1_809","NZ_MLAR01000006.1_81"],["NZ_NHYM01000007.1_20","DIZY01000072.1_24"],["NZ_LN831025.1_165","WGAU01000051.1_18"]],"hmmregion":0,
             "tree": gene_file("FlgX", "FlgX_db_FAMSA_gt0.1_m8ordered.tree"),
             "fasta": gene_file("FlgX", "FlgX_db_FAMSA_gt0.1_treeordered.fasta")},
-    
-}
-print(gene_boundaries.keys())
 
+}
 #%% Extract orthologs for every gene in `gene_boundaries`
 for gene_name in gene_boundaries:
     print("Processing:", gene_name)
@@ -329,10 +335,13 @@ for gene_name in gene_boundaries:
         prune_tree_by_ids(tree, ortholog_ids, out_tree)
     else:
         for hmm_tree in derive_hmm_tree_paths(search_name):
+            # The rerooted copy of this same tree, where the entry gives one (FliO).
+            if os.path.basename(tree) == os.path.basename(hmm_tree).replace(".tree", "_rerooted.tree"):
+                hmm_tree = tree
             if not os.path.exists(hmm_tree):
                 print(f"HMM tree not found for {gene_name}: {hmm_tree}")
                 continue
-            out_name = os.path.basename(hmm_tree).replace(".tree", "_orthologs.tree")
+            out_name = os.path.basename(hmm_tree).replace("_rerooted.tree", ".tree").replace(".tree", "_orthologs.tree")
             if search_name != gene_name:
                 out_name = out_name.replace(f"{search_name}_", f"{gene_name}_", 1)
             prune_tree_by_ids(hmm_tree, ortholog_ids, os.path.join(ORTHOLOG_OUT_DIR, out_name))

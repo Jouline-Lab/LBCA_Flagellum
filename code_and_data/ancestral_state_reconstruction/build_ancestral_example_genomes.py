@@ -13,7 +13,7 @@ given assembly's family fell (root_child.get_leaf_names()) is confirmed by
 this script to reproduce all 20 genomes' known side labels from the existing
 outputs/ancestral_example_genomes.tsv before any new selection is attempted.
 
-Selection criteria per side (2026-08-31):
+Selection criteria per side:
   - Rank candidate genomes by n_ancestral_genes_present (out of the 50 genes
     in ANCESTRAL_GENES) descending, tie-broken by n_total_flagellar_genes
     (out of the full ~81-gene flagellar family, from the phyletic
