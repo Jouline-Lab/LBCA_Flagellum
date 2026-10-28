@@ -57,9 +57,9 @@ FNR (the ID-level false negative rate) is not reported separately, since
 it is exactly 1 - TPR and adds no information beyond the sign flip.
 
 Gene name matching: Table S1 sometimes bundles several homolog names into
-one column, either natively (e.g. "FlgR/FlrC/FlrA/FlaK/FlbD", "FapA/DUF342")
-or because parse_table_s1.py merged two organism-specific-naming columns
-into one (FliN/FliY -- see MERGED_GENE_COLUMNS there). Each such column is
+one column (e.g. "FlgR/FlrC/FlrA/FlaK/FlbD", "YviE/DUF6470"), and
+parse_table_s1.py merges two organism-specific-naming columns into one
+(FliY into FliN -- see MERGED_GENE_COLUMNS there). Each such column is
 matched to the automated table by splitting on "/" and matching each part
 case-insensitively; the union of the matched automated columns' ID pools is
 used. Parts with no matching column in the automated table (e.g. FlgR,

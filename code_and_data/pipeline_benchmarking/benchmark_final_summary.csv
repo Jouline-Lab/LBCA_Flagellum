@@ -1,6 +1,6 @@
 metric,value
 Table S1 genomes (total),251
-Automated table genomes (total),80789
+Automated table genomes (total),85205
 Common assemblies compared,238
 S1 genomes discarded (absent from automated table / version mismatch),13
 S1 gene columns (after FliN/FliY merge),82

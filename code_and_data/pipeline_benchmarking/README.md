@@ -39,12 +39,9 @@ Parses the `Table S1` sheet of the supplementary spreadsheet into a tidy
 DataFrame: one column per gene, with the protein/gene IDs for each genome
 listed below it, and the leading genome assembly identifier stripped from
 each ID. Also merges Table S1's `FliN` and `FliY` columns into a single
-`FliN/FliY` column (union of IDs per genome) before stripping, since the
+`FliN` column (union of IDs per genome) before stripping, since the
 automated table only ever produces one column (`FliN`) for this gene --
-see `MERGED_GENE_COLUMNS` in the script. Separately, renames `Flagellar_put`
-to `Flagellar_put/Putative` so it lines up with the automated table's
-`Putative` column, which has no textual overlap with the S1 name -- see
-`ALIASED_GENE_COLUMNS`.
+see `MERGED_GENE_COLUMNS` in the script.
 
 ### Inputs
 
@@ -176,8 +173,14 @@ top level. The per-id NCBI evidence behind them is audit trail, written to
 ### How to run
 
 ```bash
-python ncbi_id_status_check.py [--s1-input ...] [--large-input ...]
+python ncbi_id_status_check.py [--s1-input ...] [--large-input ...] [--status-cache-input ...]
 ```
+
+NCBI keeps withdrawing accessions, so a fresh run can count a few more stale
+ids than the published one. To reproduce Table S2 exactly, pass the committed
+status snapshot (copy `quality_check_and_filtering/ncbi_id_status.csv`
+elsewhere first, since the run overwrites it) as `--status-cache-input`. Ids
+found there are not re-queried.
 
 ## Supplementary table
 

@@ -138,10 +138,21 @@ def fetch_single_liveness(acc_id):
     return "not_found", ""
 
 
-def check_ncbi_status(ids):
-    """queried_id -> (status, comment) for every id in ids (deduped internally)."""
-    unique_ids = sorted(set(ids))
-    status_map = {}
+def load_status_cache(path):
+    """queried_id -> (status, comment) from a previous run's ncbi_id_status.csv."""
+    cache_df = pd.read_csv(path, dtype=str, keep_default_na=False)
+    return {row.ncbi_id: (row.status, row.comment) for row in cache_df.itertuples()}
+
+
+def check_ncbi_status(ids, cached=None):
+    """queried_id -> (status, comment) for every id in ids (deduped internally).
+    Ids already in cached are taken from it rather than re-queried, so a rerun
+    can reproduce an earlier run's NCBI snapshot."""
+    cached = cached or {}
+    status_map = {i: cached[i] for i in set(ids) if i in cached}
+    unique_ids = sorted(set(ids) - set(status_map))
+    if status_map:
+        print(f"{len(status_map)} ids taken from the status cache")
 
     print(f"Checking {len(unique_ids)} unique ids against NCBI (batches of {BATCH_SIZE})...")
     for i in range(0, len(unique_ids), BATCH_SIZE):
@@ -222,6 +233,8 @@ def main():
     )
     parser.add_argument("--s1-input", default=S1_DEFAULT_INPUT)
     parser.add_argument("--large-input", default=LARGE_TABLE_DEFAULT_INPUT)
+    parser.add_argument("--status-cache-input", default=None,
+                        help="Reuse NCBI statuses from a previous ncbi_id_status.csv instead of re-querying")
     parser.add_argument("--status-cache-output", default=STATUS_CACHE_DEFAULT)
     parser.add_argument("--annotated-missing-output", default=ANNOTATED_MISSING_DEFAULT)
     parser.add_argument("--annotated-missing-reversed-output", default=ANNOTATED_MISSING_REVERSED_DEFAULT)
@@ -259,7 +272,8 @@ def main():
         missing_df["Missing Reference ID"],
         missing_reversed_df["Missing S1 ID"],
     ])
-    status_map = check_ncbi_status(all_ids)
+    cached = load_status_cache(args.status_cache_input) if args.status_cache_input else None
+    status_map = check_ncbi_status(all_ids, cached)
 
     status_df = pd.DataFrame(
         [(k, v[0], v[1]) for k, v in status_map.items()],
